@@ -29,6 +29,12 @@ Practice is complete when the student:
 
 Sets travel in the student link itself, so teachers can share the URL directly.
 
+## Live site
+
+GitHub Pages: https://jackson24601.github.io/vocabularypractice/
+
+Asset paths are relative so the app works from that project subdirectory.
+
 ## Develop
 
 ```bash
@@ -46,4 +52,10 @@ For quicker local testing of the practice timer, append `&fast=1` to a student l
 ```bash
 npm run build
 npm run preview
+```
+
+For a production build meant for GitHub Pages:
+
+```bash
+VITE_BASE=/vocabularypractice/ npm run build
 ```
