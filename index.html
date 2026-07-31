@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WordNest — Create Vocabulary Practice</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=Sora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="WordNest home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">WordNest</span>
+        </a>
+        <p class="brand-tagline">Vocabulary practice for your classroom</p>
+      </header>
+
+      <main class="main">
+        <section class="intro" aria-labelledby="page-title">
+          <h1 id="page-title">Create a practice set</h1>
+          <p class="lede">
+            Add up to ten terms, set a due date, and tell us where to send
+            student completion reports.
+          </p>
+        </section>
+
+        <form id="vocab-form" class="vocab-form" novalidate>
+          <section class="form-block" aria-labelledby="set-details-heading">
+            <h2 id="set-details-heading">Set details</h2>
+
+            <div class="field">
+              <label for="set-name">Vocabulary set name</label>
+              <input
+                id="set-name"
+                name="setName"
+                type="text"
+                maxlength="80"
+                autocomplete="off"
+                required
+                placeholder="e.g. Chapter 4 — Ecosystems"
+              />
+              <p class="field-error" data-error-for="setName" hidden></p>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="due-date">Practice due date</label>
+                <input id="due-date" name="dueDate" type="date" required />
+                <p class="field-error" data-error-for="dueDate" hidden></p>
+              </div>
+
+              <div class="field">
+                <label for="teacher-email">Report email</label>
+                <input
+                  id="teacher-email"
+                  name="teacherEmail"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  placeholder="you@school.edu"
+                />
+                <p class="hint">
+                  You’ll receive a report each time a student finishes.
+                </p>
+                <p class="field-error" data-error-for="teacherEmail" hidden></p>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-block" aria-labelledby="terms-heading">
+            <div class="terms-header">
+              <h2 id="terms-heading">Terms &amp; definitions</h2>
+              <p class="term-count" id="term-count" aria-live="polite">
+                1 of 10 terms
+              </p>
+            </div>
+
+            <div id="terms-list" class="terms-list"></div>
+
+            <button
+              type="button"
+              id="add-term"
+              class="btn btn-secondary"
+              aria-describedby="terms-heading"
+            >
+              Add another term
+            </button>
+            <p class="field-error" data-error-for="terms" hidden></p>
+          </section>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              Create practice set
+            </button>
+          </div>
+        </form>
+
+        <section
+          id="success-panel"
+          class="success-panel"
+          hidden
+          aria-live="polite"
+        >
+          <h2>Practice set ready</h2>
+          <p id="success-message"></p>
+          <dl class="success-meta">
+            <div>
+              <dt>Set</dt>
+              <dd id="success-name"></dd>
+            </div>
+            <div>
+              <dt>Due</dt>
+              <dd id="success-due"></dd>
+            </div>
+            <div>
+              <dt>Reports to</dt>
+              <dd id="success-email"></dd>
+            </div>
+            <div>
+              <dt>Terms</dt>
+              <dd id="success-terms"></dd>
+            </div>
+          </dl>
+          <button type="button" id="create-another" class="btn btn-secondary">
+            Create another set
+          </button>
+        </section>
+      </main>
+    </div>
+
+    <template id="term-row-template">
+      <div class="term-row">
+        <div class="term-index" aria-hidden="true"></div>
+        <div class="field">
+          <label>Term</label>
+          <input
+            class="term-input"
+            name="term"
+            type="text"
+            maxlength="60"
+            autocomplete="off"
+            required
+            placeholder="Word or phrase"
+          />
+        </div>
+        <div class="field field-definition">
+          <label>Definition</label>
+          <textarea
+            class="definition-input"
+            name="definition"
+            rows="2"
+            maxlength="280"
+            required
+            placeholder="Student-facing meaning"
+          ></textarea>
+        </div>
+        <button
+          type="button"
+          class="btn-icon remove-term"
+          aria-label="Remove term"
+          title="Remove term"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+    </template>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
