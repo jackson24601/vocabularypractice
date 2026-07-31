@@ -77,7 +77,9 @@ export function decodeSetPayload(encoded) {
 }
 
 export function buildStudentLink(set) {
-  const url = new URL("/student.html", window.location.origin);
+  // Resolve relative to the current page so GitHub Pages project URLs work
+  // (e.g. https://user.github.io/vocabularypractice/).
+  const url = new URL("student.html", window.location.href);
   url.searchParams.set("set", encodeSetPayload(set));
   return url.toString();
 }
