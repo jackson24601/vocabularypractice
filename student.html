@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WordNest — Student Practice</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=Sora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="student-body">
+    <div class="page student-page">
+      <header class="site-header student-header">
+        <a class="brand" href="/" aria-label="WordNest home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">WordNest</span>
+        </a>
+        <p class="brand-tagline" id="set-label">Vocabulary practice</p>
+      </header>
+
+      <main class="main">
+        <section id="missing-panel" class="panel" hidden>
+          <h1>Practice link needed</h1>
+          <p>
+            This page needs a vocabulary set link from your teacher. Ask them
+            for the student practice link.
+          </p>
+        </section>
+
+        <section id="gate-panel" class="panel" hidden>
+          <h1 id="gate-title">Ready to practice</h1>
+          <p class="lede" id="gate-lede"></p>
+          <form id="gate-form" class="gate-form" novalidate>
+            <div class="field">
+              <label for="student-email">School email</label>
+              <input
+                id="student-email"
+                name="studentEmail"
+                type="email"
+                autocomplete="email"
+                required
+                placeholder="you@student.school.edu"
+              />
+              <p class="hint">
+                Your teacher will receive a report when you finish.
+              </p>
+              <p class="field-error" data-error-for="studentEmail" hidden></p>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Start 10-minute practice
+            </button>
+          </form>
+        </section>
+
+        <section id="practice-panel" class="practice-panel" hidden>
+          <div class="practice-hud" aria-live="polite">
+            <div class="hud-item">
+              <span class="hud-label">Time left</span>
+              <span class="hud-value" id="timer">10:00</span>
+            </div>
+            <div class="hud-item">
+              <span class="hud-label">Correct</span>
+              <span class="hud-value" id="correct-count">0</span>
+            </div>
+            <div class="hud-item">
+              <span class="hud-label">Accuracy</span>
+              <span class="hud-value" id="accuracy">—</span>
+            </div>
+          </div>
+
+          <div class="definition-stage">
+            <p class="stage-label" id="stage-label">Read the definition</p>
+            <div
+              id="definition-box"
+              class="definition-box"
+              aria-live="polite"
+            ></div>
+            <p id="feedback" class="feedback" hidden></p>
+          </div>
+
+          <div
+            id="options"
+            class="options"
+            hidden
+            role="group"
+            aria-label="Choose the matching term"
+          ></div>
+        </section>
+
+        <section id="result-panel" class="panel result-panel" hidden>
+          <h1 id="result-title"></h1>
+          <p id="result-message"></p>
+          <dl class="success-meta">
+            <div>
+              <dt>Correct matches</dt>
+              <dd id="result-correct"></dd>
+            </div>
+            <div>
+              <dt>Accuracy</dt>
+              <dd id="result-accuracy"></dd>
+            </div>
+            <div>
+              <dt>Time practiced</dt>
+              <dd id="result-time"></dd>
+            </div>
+            <div>
+              <dt>Report</dt>
+              <dd id="result-report"></dd>
+            </div>
+          </dl>
+          <button type="button" id="try-again" class="btn btn-primary">
+            Try again
+          </button>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/student.js"></script>
+  </body>
+</html>

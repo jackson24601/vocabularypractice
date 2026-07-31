@@ -1,0 +1,322 @@
+import {
+  decodeSetPayload,
+  formatDueDate,
+  getPracticeConfig,
+  pickQuestion,
+  saveReport,
+} from "./shared.js";
+
+const missingPanel = document.querySelector("#missing-panel");
+const gatePanel = document.querySelector("#gate-panel");
+const practicePanel = document.querySelector("#practice-panel");
+const resultPanel = document.querySelector("#result-panel");
+const gateForm = document.querySelector("#gate-form");
+const setLabel = document.querySelector("#set-label");
+const gateTitle = document.querySelector("#gate-title");
+const gateLede = document.querySelector("#gate-lede");
+const timerEl = document.querySelector("#timer");
+const correctCountEl = document.querySelector("#correct-count");
+const accuracyEl = document.querySelector("#accuracy");
+const stageLabel = document.querySelector("#stage-label");
+const definitionBox = document.querySelector("#definition-box");
+const feedbackEl = document.querySelector("#feedback");
+const optionsEl = document.querySelector("#options");
+const tryAgainButton = document.querySelector("#try-again");
+
+const params = new URLSearchParams(window.location.search);
+const vocabSet = decodeSetPayload(params.get("set"));
+const config = getPracticeConfig();
+
+const state = {
+  studentEmail: "",
+  correct: 0,
+  attempted: 0,
+  recentIndex: -1,
+  current: null,
+  running: false,
+  ended: false,
+  endsAt: 0,
+  timers: [],
+  tickId: null,
+};
+
+function clearTimers() {
+  state.timers.forEach((id) => window.clearTimeout(id));
+  state.timers = [];
+}
+
+function clearTick() {
+  if (state.tickId !== null) {
+    window.clearInterval(state.tickId);
+    state.tickId = null;
+  }
+}
+
+function later(fn, ms) {
+  const id = window.setTimeout(fn, ms);
+  state.timers.push(id);
+  return id;
+}
+
+function showPanel(panel) {
+  [missingPanel, gatePanel, practicePanel, resultPanel].forEach((el) => {
+    el.hidden = el !== panel;
+  });
+}
+
+function setFieldError(message) {
+  const error = document.querySelector('[data-error-for="studentEmail"]');
+  const input = gateForm.studentEmail;
+  if (!message) {
+    error.hidden = true;
+    error.textContent = "";
+    input.classList.remove("invalid");
+    return;
+  }
+  error.hidden = false;
+  error.textContent = message;
+  input.classList.add("invalid");
+}
+
+function formatTime(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function accuracyPercent() {
+  if (state.attempted === 0) return null;
+  return Math.round((state.correct / state.attempted) * 100);
+}
+
+function updateHud() {
+  correctCountEl.textContent = String(state.correct);
+  const percent = accuracyPercent();
+  accuracyEl.textContent = percent === null ? "—" : `${percent}%`;
+}
+
+function updateTimerDisplay() {
+  const remaining = state.endsAt - Date.now();
+  timerEl.textContent = formatTime(remaining);
+  if (remaining <= 0 && state.running) {
+    endPractice();
+  }
+}
+
+function disableOptions() {
+  optionsEl.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+  });
+}
+
+function renderOptions(question) {
+  optionsEl.innerHTML = "";
+  question.options.forEach((term) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "option-btn";
+    button.textContent = term;
+    button.dataset.term = term;
+    optionsEl.appendChild(button);
+  });
+  optionsEl.hidden = false;
+}
+
+function showFeedback(message, kind) {
+  feedbackEl.hidden = false;
+  feedbackEl.textContent = message;
+  feedbackEl.dataset.kind = kind;
+}
+
+function clearFeedback() {
+  feedbackEl.hidden = true;
+  feedbackEl.textContent = "";
+  delete feedbackEl.dataset.kind;
+}
+
+function startRound() {
+  if (!state.running || state.ended) return;
+
+  clearTimers();
+  clearFeedback();
+  optionsEl.hidden = true;
+  optionsEl.innerHTML = "";
+  stageLabel.textContent = "Read the definition";
+
+  const question = pickQuestion(vocabSet.terms, state.recentIndex);
+  state.current = question;
+  state.recentIndex = question.answerIndex;
+  definitionBox.textContent = question.definition;
+  definitionBox.classList.remove("is-answered");
+  definitionBox.classList.add("is-revealing");
+
+  later(() => {
+    if (!state.running || state.ended) return;
+    definitionBox.classList.remove("is-revealing");
+    stageLabel.textContent = "Choose the matching term";
+    renderOptions(question);
+  }, config.definitionMs);
+}
+
+function handleAnswer(selectedTerm) {
+  if (!state.running || state.ended || !state.current) return;
+  if (!optionsEl || optionsEl.hidden) return;
+
+  const { correctTerm } = state.current;
+  const isCorrect = selectedTerm === correctTerm;
+
+  state.attempted += 1;
+  if (isCorrect) state.correct += 1;
+  updateHud();
+  disableOptions();
+
+  optionsEl.querySelectorAll("button").forEach((button) => {
+    if (button.dataset.term === correctTerm) {
+      button.classList.add("is-correct");
+    } else if (button.dataset.term === selectedTerm && !isCorrect) {
+      button.classList.add("is-wrong");
+    }
+  });
+
+  definitionBox.classList.add("is-answered");
+
+  if (isCorrect) {
+    showFeedback("Correct!", "correct");
+  } else {
+    showFeedback(`The correct term was “${correctTerm}”.`, "wrong");
+  }
+
+  state.current = null;
+  later(() => {
+    if (!state.running || state.ended) return;
+    startRound();
+  }, config.feedbackMs);
+}
+
+function passedPractice() {
+  const percent = accuracyPercent() ?? 0;
+  return (
+    state.correct >= config.minCorrect &&
+    percent >= config.passingScore
+  );
+}
+
+function endPractice() {
+  if (state.ended) return;
+  state.ended = true;
+  state.running = false;
+  clearTimers();
+  clearTick();
+
+  const percent = accuracyPercent() ?? 0;
+  const passed = passedPractice();
+
+  const report = {
+    id: crypto.randomUUID(),
+    setId: vocabSet.id,
+    setName: vocabSet.setName,
+    teacherEmail: vocabSet.teacherEmail,
+    studentEmail: state.studentEmail,
+    correct: state.correct,
+    attempted: state.attempted,
+    accuracy: percent,
+    durationMs: config.practiceMs,
+    passed,
+    completedAt: new Date().toISOString(),
+  };
+  saveReport(report);
+
+  const durationLabel = config.fast ? "the practice period" : "ten minutes";
+  showPanel(resultPanel);
+  document.querySelector("#result-title").textContent = passed
+    ? "Practice complete"
+    : "Keep practicing";
+  document.querySelector("#result-message").textContent = passed
+    ? `Nice work. You practiced for ${durationLabel}, scored ${percent}%, and got ${state.correct} correct matches.`
+    : `To finish, you need ${durationLabel} of practice, at least ${config.minCorrect} correct matches, and ${config.passingScore}% accuracy or higher. You scored ${percent}% with ${state.correct} correct.`;
+  document.querySelector("#result-correct").textContent =
+    `${state.correct} / ${state.attempted}`;
+  document.querySelector("#result-accuracy").textContent = `${percent}%`;
+  document.querySelector("#result-time").textContent = formatTime(
+    config.practiceMs,
+  );
+  document.querySelector("#result-report").textContent = passed
+    ? `Sent to ${vocabSet.teacherEmail}`
+    : `Not sent yet — requirements not met`;
+}
+
+function startPractice(studentEmail) {
+  state.studentEmail = studentEmail;
+  state.correct = 0;
+  state.attempted = 0;
+  state.recentIndex = -1;
+  state.current = null;
+  state.running = true;
+  state.ended = false;
+  state.endsAt = Date.now() + config.practiceMs;
+
+  showPanel(practicePanel);
+  updateHud();
+  updateTimerDisplay();
+  startRound();
+
+  clearTick();
+  state.tickId = window.setInterval(() => {
+    if (!state.running) {
+      clearTick();
+      return;
+    }
+    updateTimerDisplay();
+  }, 250);
+}
+
+function setupGate() {
+  setLabel.textContent = vocabSet.setName;
+  gateTitle.textContent = vocabSet.setName;
+  gateLede.textContent =
+    `Practice is due ${formatDueDate(vocabSet.dueDate)}. Enter your school email to begin. You’ll have ten minutes to match definitions to terms.`;
+  showPanel(gatePanel);
+  gateForm.studentEmail.focus();
+}
+
+if (!vocabSet) {
+  showPanel(missingPanel);
+} else {
+  setupGate();
+}
+
+gateForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const email = gateForm.studentEmail.value.trim();
+  setFieldError("");
+
+  if (!email) {
+    setFieldError("Enter your school email to begin.");
+    gateForm.studentEmail.focus();
+    return;
+  }
+  if (!gateForm.studentEmail.checkValidity()) {
+    setFieldError("Enter a valid school email address.");
+    gateForm.studentEmail.focus();
+    return;
+  }
+
+  startPractice(email);
+});
+
+optionsEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-term]");
+  if (!button || button.disabled) return;
+  handleAnswer(button.dataset.term);
+});
+
+tryAgainButton.addEventListener("click", () => {
+  clearTimers();
+  clearTick();
+  state.running = false;
+  state.ended = false;
+  gateForm.reset();
+  setFieldError("");
+  setupGate();
+});

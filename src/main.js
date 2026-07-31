@@ -1,5 +1,11 @@
-const MAX_TERMS = 10;
-const STORAGE_KEY = "wordnest.vocabularySets";
+import {
+  MAX_TERMS,
+  MIN_TERMS,
+  buildStudentLink,
+  formatDueDate,
+  saveSet,
+  todayIsoDate,
+} from "./shared.js";
 
 const form = document.querySelector("#vocab-form");
 const termsList = document.querySelector("#terms-list");
@@ -8,14 +14,9 @@ const termCount = document.querySelector("#term-count");
 const termRowTemplate = document.querySelector("#term-row-template");
 const successPanel = document.querySelector("#success-panel");
 const createAnotherButton = document.querySelector("#create-another");
+const copyLinkButton = document.querySelector("#copy-link");
+const studentLinkInput = document.querySelector("#student-link");
 const dueDateInput = document.querySelector("#due-date");
-
-function todayIsoDate() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60_000);
-  return local.toISOString().slice(0, 10);
-}
 
 function getTermRows() {
   return [...termsList.querySelectorAll(".term-row")];
@@ -38,18 +39,12 @@ function updateTermUi() {
 
     const removeButton = row.querySelector(".remove-term");
     removeButton.disabled = count === 1;
-    removeButton.setAttribute(
-      "aria-label",
-      `Remove term ${index + 1}`,
-    );
+    removeButton.setAttribute("aria-label", `Remove term ${index + 1}`);
   });
 
   termCount.textContent = `${count} of ${MAX_TERMS} terms`;
   addTermButton.disabled = count >= MAX_TERMS;
-  addTermButton.setAttribute(
-    "aria-disabled",
-    String(count >= MAX_TERMS),
-  );
+  addTermButton.setAttribute("aria-disabled", String(count >= MAX_TERMS));
 }
 
 function clearFieldError(name) {
@@ -141,6 +136,12 @@ function validateForm() {
     terms[0]?.termInput.classList.add("invalid");
     terms[0]?.definitionInput.classList.add("invalid");
     valid = false;
+  } else if (filledTerms.length < MIN_TERMS) {
+    setFieldError(
+      "terms",
+      `Add at least ${MIN_TERMS} terms so students get four answer choices.`,
+    );
+    valid = false;
   }
 
   for (const item of terms) {
@@ -174,48 +175,42 @@ function validateForm() {
   };
 }
 
-function loadSets() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveSet(set) {
-  const sets = loadSets();
-  sets.unshift(set);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sets));
-}
-
-function formatDueDate(isoDate) {
-  const date = new Date(`${isoDate}T00:00:00`);
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
-}
-
 function showSuccess(set) {
+  const link = buildStudentLink(set);
   form.hidden = true;
   successPanel.hidden = false;
   document.querySelector("#success-message").textContent =
-    `“${set.setName}” is saved. Students can practice until ${formatDueDate(set.dueDate)}, and reports will go to ${set.teacherEmail}.`;
+    `“${set.setName}” is ready. Share the student link below. Reports will go to ${set.teacherEmail}.`;
   document.querySelector("#success-name").textContent = set.setName;
   document.querySelector("#success-due").textContent = formatDueDate(set.dueDate);
   document.querySelector("#success-email").textContent = set.teacherEmail;
   document.querySelector("#success-terms").textContent = String(set.terms.length);
-  createAnotherButton.focus();
+  studentLinkInput.value = link;
+  copyLinkButton.textContent = "Copy link";
+  studentLinkInput.focus();
+  studentLinkInput.select();
+}
+
+async function copyStudentLink() {
+  const link = studentLinkInput.value;
+  if (!link) return;
+
+  try {
+    await navigator.clipboard.writeText(link);
+    copyLinkButton.textContent = "Copied";
+  } catch {
+    studentLinkInput.focus();
+    studentLinkInput.select();
+    copyLinkButton.textContent = "Select & copy";
+  }
 }
 
 function resetForm() {
   form.reset();
   termsList.innerHTML = "";
-  addTermRow();
+  for (let i = 0; i < MIN_TERMS; i += 1) {
+    addTermRow();
+  }
   dueDateInput.min = todayIsoDate();
   clearValidationState();
   successPanel.hidden = true;
@@ -257,6 +252,12 @@ createAnotherButton.addEventListener("click", () => {
   resetForm();
 });
 
+copyLinkButton.addEventListener("click", () => {
+  copyStudentLink();
+});
+
 dueDateInput.min = todayIsoDate();
-addTermRow();
+for (let i = 0; i < MIN_TERMS; i += 1) {
+  addTermRow();
+}
 form.setName.focus();
