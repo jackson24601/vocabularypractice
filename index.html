@@ -26,8 +26,8 @@
         <section class="intro" aria-labelledby="page-title">
           <h1 id="page-title">Create a practice set</h1>
           <p class="lede">
-            Add up to ten terms, set a due date, and tell us where to send
-            student completion reports.
+            Add four to ten terms, set a due date, and tell us where to send
+            student completion reports. You’ll get a shareable practice link.
           </p>
         </section>
 
@@ -78,7 +78,7 @@
             <div class="terms-header">
               <h2 id="terms-heading">Terms &amp; definitions</h2>
               <p class="term-count" id="term-count" aria-live="polite">
-                1 of 10 terms
+                4 of 10 terms
               </p>
             </div>
 
@@ -87,9 +87,10 @@
             <button
               type="button"
               id="add-term"
-              class="btn btn-secondary"
+              class="btn btn-add-term"
               aria-describedby="terms-heading"
             >
+              <span class="btn-add-mark" aria-hidden="true">+</span>
               Add another term
             </button>
             <p class="field-error" data-error-for="terms" hidden></p>
@@ -128,6 +129,21 @@
               <dd id="success-terms"></dd>
             </div>
           </dl>
+
+          <div class="share-block">
+            <label for="student-link">Student practice link</label>
+            <div class="share-row">
+              <input id="student-link" type="text" readonly />
+              <button type="button" id="copy-link" class="btn btn-primary">
+                Copy link
+              </button>
+            </div>
+            <p class="hint">
+              Send this link to students. They’ll enter their school email and
+              begin a ten-minute practice.
+            </p>
+          </div>
+
           <button type="button" id="create-another" class="btn btn-secondary">
             Create another set
           </button>
