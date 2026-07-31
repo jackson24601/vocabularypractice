@@ -27,6 +27,11 @@ Practice is complete when the student:
 - Scores 75% or higher
 - Gets at least 50 correct matches
 
+When those requirements are met, WordNest emails a completion report to the
+teacher address on the set (via [FormSubmit](https://formsubmit.co/)). The first
+report to a new teacher email may require clicking an activation link FormSubmit
+sends to that inbox.
+
 Sets travel in the student link itself, so teachers can share the URL directly.
 
 ## Live site

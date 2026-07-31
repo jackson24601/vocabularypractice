@@ -4,6 +4,7 @@ import {
   getPracticeConfig,
   pickQuestion,
   saveReport,
+  sendCompletionEmail,
 } from "./shared.js";
 
 const missingPanel = document.querySelector("#missing-panel");
@@ -204,7 +205,34 @@ function passedPractice() {
   );
 }
 
-function endPractice() {
+function buildMailtoReport(report) {
+  const subject = `WordNest: ${report.studentEmail} completed ${report.setName}`;
+  const body = [
+    "A student completed vocabulary practice on WordNest.",
+    "",
+    `Vocabulary set: ${report.setName}`,
+    `Student email: ${report.studentEmail}`,
+    `Correct matches: ${report.correct}`,
+    `Total attempts: ${report.attempted}`,
+    `Accuracy: ${report.accuracy}%`,
+    `Completed: ${report.completedAt}`,
+  ].join("\n");
+  return `mailto:${encodeURIComponent(report.teacherEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function showMailtoFallback(report, visible) {
+  const mailto = document.querySelector("#mailto-report");
+  if (!mailto) return;
+  if (!visible || !report) {
+    mailto.hidden = true;
+    mailto.removeAttribute("href");
+    return;
+  }
+  mailto.hidden = false;
+  mailto.href = buildMailtoReport(report);
+}
+
+async function endPractice() {
   if (state.ended) return;
   state.ended = true;
   state.running = false;
@@ -213,6 +241,7 @@ function endPractice() {
 
   const percent = accuracyPercent() ?? 0;
   const passed = passedPractice();
+  const resultReport = document.querySelector("#result-report");
 
   const report = {
     id: crypto.randomUUID(),
@@ -242,9 +271,27 @@ function endPractice() {
   document.querySelector("#result-time").textContent = formatTime(
     config.practiceMs,
   );
-  document.querySelector("#result-report").textContent = passed
-    ? `Sent to ${vocabSet.teacherEmail}`
-    : `Not sent yet — requirements not met`;
+
+  if (!passed) {
+    resultReport.textContent = "Not sent yet — requirements not met";
+    showMailtoFallback(report, false);
+    return;
+  }
+
+  resultReport.textContent = `Sending report to ${vocabSet.teacherEmail}…`;
+  showMailtoFallback(report, false);
+
+  try {
+    const emailResult = await sendCompletionEmail(report);
+    resultReport.textContent = emailResult.message;
+    // Keep a manual draft handy if FormSubmit still needs first-time activation.
+    showMailtoFallback(report, emailResult.status !== "sent");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown error";
+    resultReport.textContent =
+      `Could not email ${vocabSet.teacherEmail} automatically. ${detail}`;
+    showMailtoFallback(report, true);
+  }
 }
 
 function startPractice(studentEmail) {
@@ -319,5 +366,6 @@ tryAgainButton.addEventListener("click", () => {
   state.ended = false;
   gateForm.reset();
   setFieldError("");
+  showMailtoFallback(null, false);
   setupGate();
 });
