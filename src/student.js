@@ -182,8 +182,10 @@ function handleAnswer(selectedTerm) {
   definitionBox.classList.add("is-answered");
 
   if (isCorrect) {
+    stageLabel.textContent = "Correct!";
     showFeedback("Correct!", "correct");
   } else {
+    stageLabel.textContent = "Not quite";
     showFeedback(`The correct term was “${correctTerm}”.`, "wrong");
   }
 
@@ -227,14 +229,13 @@ function endPractice() {
   };
   saveReport(report);
 
-  const durationLabel = config.fast ? "the practice period" : "ten minutes";
   showPanel(resultPanel);
   document.querySelector("#result-title").textContent = passed
     ? "Practice complete"
     : "Keep practicing";
   document.querySelector("#result-message").textContent = passed
-    ? `Nice work. You practiced for ${durationLabel}, scored ${percent}%, and got ${state.correct} correct matches.`
-    : `To finish, you need ${durationLabel} of practice, at least ${config.minCorrect} correct matches, and ${config.passingScore}% accuracy or higher. You scored ${percent}% with ${state.correct} correct.`;
+    ? `Nice work. You practiced for ${config.fast ? "the full session" : "ten minutes"}, scored ${percent}%, and got ${state.correct} correct matches.`
+    : `To finish, you need ${config.fast ? "the full session" : "ten minutes"}, at least ${config.minCorrect} correct matches, and ${config.passingScore}% accuracy or higher. You scored ${percent}% with ${state.correct} correct.`;
   document.querySelector("#result-correct").textContent =
     `${state.correct} / ${state.attempted}`;
   document.querySelector("#result-accuracy").textContent = `${percent}%`;
