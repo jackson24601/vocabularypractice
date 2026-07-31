@@ -43,8 +43,13 @@ function updateTermUi() {
   });
 
   termCount.textContent = `${count} of ${MAX_TERMS} terms`;
-  addTermButton.disabled = count >= MAX_TERMS;
-  addTermButton.setAttribute("aria-disabled", String(count >= MAX_TERMS));
+  const atMax = count >= MAX_TERMS;
+  addTermButton.disabled = atMax;
+  if (atMax) {
+    addTermButton.setAttribute("aria-disabled", "true");
+  } else {
+    addTermButton.removeAttribute("aria-disabled");
+  }
 }
 
 function clearFieldError(name) {
@@ -72,14 +77,21 @@ function clearValidationState() {
 function addTermRow(focus = false) {
   if (getTermRows().length >= MAX_TERMS) return;
 
-  const fragment = termRowTemplate.content.cloneNode(true);
-  const row = fragment.querySelector(".term-row");
-  termsList.appendChild(fragment);
+  const row = termRowTemplate.content.firstElementChild.cloneNode(true);
+  termsList.appendChild(row);
   updateTermUi();
 
   if (focus) {
-    row.querySelector(".term-input").focus();
+    row.classList.add("term-row-flash");
+    row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const input = row.querySelector(".term-input");
+    input?.focus({ preventScroll: true });
+    window.setTimeout(() => {
+      row.classList.remove("term-row-flash");
+    }, 900);
   }
+
+  return row;
 }
 
 function collectTerms() {
@@ -225,7 +237,10 @@ termsList.addEventListener("click", (event) => {
   updateTermUi();
 });
 
-addTermButton.addEventListener("click", () => {
+addTermButton.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (addTermButton.disabled) return;
   addTermRow(true);
 });
 

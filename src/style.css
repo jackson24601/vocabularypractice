@@ -253,6 +253,11 @@ textarea.invalid {
   animation: fade-in 0.28s ease both;
 }
 
+.term-row-flash {
+  border-color: color-mix(in srgb, var(--moss) 55%, white);
+  box-shadow: 0 0 0 3px rgba(47, 106, 78, 0.14);
+}
+
 .term-index {
   width: 1.7rem;
   height: 1.7rem;
@@ -308,6 +313,31 @@ textarea.invalid {
 
 .btn-secondary:hover {
   background: var(--moss-soft);
+}
+
+.btn-add-term {
+  width: 100%;
+  justify-content: center;
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  border: 1px dashed color-mix(in srgb, var(--moss) 45%, white);
+  font-weight: 600;
+}
+
+.btn-add-term:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--moss-soft) 70%, white);
+  border-style: solid;
+}
+
+.btn-add-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .btn:disabled,
