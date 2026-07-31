@@ -96,6 +96,100 @@ export function saveReport(report) {
   }
 }
 
+function formatCompletedAt(isoString) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(isoString));
+  } catch {
+    return isoString;
+  }
+}
+
+/**
+ * Email a completion report to the teacher via FormSubmit.
+ * The first report to a new address may require the teacher to click an
+ * activation link FormSubmit sends them.
+ */
+export async function sendCompletionEmail(report) {
+  const teacherEmail = report.teacherEmail?.trim();
+  if (!teacherEmail) {
+    throw new Error("Missing teacher email address.");
+  }
+
+  const subject = `WordNest: ${report.studentEmail} completed ${report.setName}`;
+  const message = [
+    "A student completed vocabulary practice on WordNest.",
+    "",
+    `Vocabulary set: ${report.setName}`,
+    `Student email: ${report.studentEmail}`,
+    `Correct matches: ${report.correct}`,
+    `Total attempts: ${report.attempted}`,
+    `Accuracy: ${report.accuracy}%`,
+    `Time practiced: ${Math.round(report.durationMs / 60000)} minutes`,
+    `Completed: ${formatCompletedAt(report.completedAt)}`,
+  ].join("\n");
+
+  const response = await fetch(
+    `https://formsubmit.co/ajax/${encodeURIComponent(teacherEmail)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        _subject: subject,
+        _template: "table",
+        _captcha: "false",
+        name: report.studentEmail,
+        email: report.studentEmail,
+        studentEmail: report.studentEmail,
+        setName: report.setName,
+        correctMatches: report.correct,
+        attempts: report.attempted,
+        accuracy: `${report.accuracy}%`,
+        completedAt: formatCompletedAt(report.completedAt),
+        message,
+      }),
+    },
+  );
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const detail = data?.message || `HTTP ${response.status}`;
+    throw new Error(detail);
+  }
+
+  const payloadMessage = String(data?.message || "");
+  const successFlag = String(data?.success ?? "").toLowerCase();
+  const needsActivation = /activat/i.test(payloadMessage);
+
+  if (needsActivation) {
+    return {
+      status: "activation_required",
+      message:
+        `Almost there: check ${teacherEmail} for a FormSubmit “Activate Form” email, click the link, then have the student complete practice once more so the report can send.`,
+    };
+  }
+
+  if (successFlag === "false") {
+    throw new Error(payloadMessage || "Email service rejected the report.");
+  }
+
+  return {
+    status: "sent",
+    message: `Report emailed to ${teacherEmail}`,
+  };
+}
+
 export function shuffle(items) {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
