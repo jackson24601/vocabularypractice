@@ -4,7 +4,7 @@ export const MAX_TERMS = 10;
 export const MIN_TERMS = 4;
 export const PRACTICE_DURATION_MS = 10 * 60 * 1000;
 export const DEFINITION_REVEAL_MS = 3000;
-export const FEEDBACK_MS = 1400;
+export const FEEDBACK_MS = 1800;
 export const PASSING_SCORE = 75;
 export const MIN_CORRECT = 50;
 
@@ -135,7 +135,7 @@ export function getPracticeConfig() {
   return {
     practiceMs: fast ? 20_000 : PRACTICE_DURATION_MS,
     definitionMs: fast ? 800 : DEFINITION_REVEAL_MS,
-    feedbackMs: fast ? 700 : FEEDBACK_MS,
+    feedbackMs: fast ? 1200 : FEEDBACK_MS,
     minCorrect: fast ? 3 : MIN_CORRECT,
     passingScore: PASSING_SCORE,
     fast,

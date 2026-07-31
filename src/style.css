@@ -488,6 +488,7 @@ textarea.invalid {
   color: var(--muted);
   font-size: 0.92rem;
   font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .definition-box {
@@ -515,17 +516,31 @@ textarea.invalid {
 
 .feedback {
   margin: 0;
-  min-height: 1.5rem;
-  font-weight: 600;
-  font-size: 1.05rem;
+  min-height: 1.7rem;
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+  letter-spacing: -0.02em;
 }
 
 .feedback[data-kind="correct"] {
   color: var(--moss-deep);
+  animation: fade-in 0.2s ease both;
 }
 
 .feedback[data-kind="wrong"] {
   color: var(--danger);
+  animation: fade-in 0.2s ease both;
+}
+
+.definition-stage:has(.feedback[data-kind="correct"]) .stage-label {
+  color: var(--moss-deep);
+  font-weight: 600;
+}
+
+.definition-stage:has(.feedback[data-kind="wrong"]) .stage-label {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .options {
