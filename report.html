@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WordNest — Class Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=Sora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="WordNest home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">WordNest</span>
+        </a>
+        <p class="brand-tagline">Class report</p>
+      </header>
+
+      <main class="main">
+        <section id="missing-panel" class="panel" hidden>
+          <h1>Class report link needed</h1>
+          <p>
+            This page needs the class report link from the teacher success
+            screen.
+          </p>
+        </section>
+
+        <section id="report-panel" class="panel report-panel" hidden>
+          <h1 id="report-title">Class report</h1>
+          <p class="lede" id="report-lede"></p>
+
+          <dl class="success-meta">
+            <div>
+              <dt>Due</dt>
+              <dd id="report-due"></dd>
+            </div>
+            <div>
+              <dt>Reports to</dt>
+              <dd id="report-email"></dd>
+            </div>
+            <div>
+              <dt>Time remaining</dt>
+              <dd id="report-countdown">—</dd>
+            </div>
+            <div>
+              <dt>Email status</dt>
+              <dd id="report-status">Waiting for the due time</dd>
+            </div>
+          </dl>
+
+          <p class="hint" id="report-hint">
+            Leave this page open until the due time, or reopen it after the
+            deadline. If students were still practicing at the deadline, refresh
+            and email again to include them.
+          </p>
+
+          <div class="report-toolbar">
+            <button type="button" id="refresh-report" class="btn btn-secondary">
+              Refresh results
+            </button>
+            <button type="button" id="send-report" class="btn btn-primary" disabled title="Available after the due time">
+              Email class report
+            </button>
+          </div>
+
+          <div class="report-summary" aria-live="polite">
+            <p id="report-counts">No students yet.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th scope="col">Student</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Accuracy</th>
+                  <th scope="col">Correct</th>
+                  <th scope="col">Sessions</th>
+                </tr>
+              </thead>
+              <tbody id="report-rows">
+                <tr>
+                  <td colspan="5">Waiting for students to practice…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./src/report.js"></script>
+  </body>
+</html>

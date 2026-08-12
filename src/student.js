@@ -1,13 +1,16 @@
 import {
   decodeSetPayload,
-  formatDueDate,
+  formatDueAt,
   getPracticeConfig,
+  isDueExpired,
   pickQuestion,
   saveReport,
-  sendCompletionEmail,
+  saveStudentReport,
+  sendClassReportIfDue,
 } from "./shared.js";
 
 const missingPanel = document.querySelector("#missing-panel");
+const closedPanel = document.querySelector("#closed-panel");
 const gatePanel = document.querySelector("#gate-panel");
 const practicePanel = document.querySelector("#practice-panel");
 const resultPanel = document.querySelector("#result-panel");
@@ -60,9 +63,12 @@ function later(fn, ms) {
 }
 
 function showPanel(panel) {
-  [missingPanel, gatePanel, practicePanel, resultPanel].forEach((el) => {
-    el.hidden = el !== panel;
-  });
+  [missingPanel, closedPanel, gatePanel, practicePanel, resultPanel].forEach(
+    (el) => {
+      if (!el) return;
+      el.hidden = el !== panel;
+    },
+  );
 }
 
 function setFieldError(message) {
@@ -205,31 +211,13 @@ function passedPractice() {
   );
 }
 
-function buildMailtoReport(report) {
-  const subject = `WordNest: ${report.studentEmail} completed ${report.setName}`;
-  const body = [
-    "A student completed vocabulary practice on WordNest.",
-    "",
-    `Vocabulary set: ${report.setName}`,
-    `Student email: ${report.studentEmail}`,
-    `Correct matches: ${report.correct}`,
-    `Total attempts: ${report.attempted}`,
-    `Accuracy: ${report.accuracy}%`,
-    `Completed: ${report.completedAt}`,
-  ].join("\n");
-  return `mailto:${encodeURIComponent(report.teacherEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
-function showMailtoFallback(report, visible) {
-  const mailto = document.querySelector("#mailto-report");
-  if (!mailto) return;
-  if (!visible || !report) {
-    mailto.hidden = true;
-    mailto.removeAttribute("href");
-    return;
+async function maybeSendClassReport() {
+  if (!vocabSet?.storeId) return null;
+  try {
+    return await sendClassReportIfDue(vocabSet);
+  } catch {
+    return null;
   }
-  mailto.hidden = false;
-  mailto.href = buildMailtoReport(report);
 }
 
 async function endPractice() {
@@ -272,29 +260,35 @@ async function endPractice() {
     config.practiceMs,
   );
 
-  if (!passed) {
-    resultReport.textContent = "Not sent yet — requirements not met";
-    showMailtoFallback(report, false);
+  resultReport.textContent = "Saving your results…";
+  if (!vocabSet.storeId || !vocabSet.storeEditKey) {
+    resultReport.textContent =
+      "Results saved on this device. This practice link cannot send a class report. Ask your teacher for a new link.";
     return;
   }
-
-  resultReport.textContent = `Sending report to ${vocabSet.teacherEmail}…`;
-  showMailtoFallback(report, false);
-
   try {
-    const emailResult = await sendCompletionEmail(report);
-    resultReport.textContent = emailResult.message;
-    // Keep a manual draft handy if FormSubmit still needs first-time activation.
-    showMailtoFallback(report, emailResult.status !== "sent");
+    await saveStudentReport(vocabSet, report);
+    if (isDueExpired(vocabSet)) {
+      const emailResult = await maybeSendClassReport();
+      resultReport.textContent = emailResult?.message
+        || `Results saved. Practice closed ${formatDueAt(vocabSet)}.`;
+    } else {
+      resultReport.textContent =
+        `Results saved. Your teacher will get a class report after ${formatDueAt(vocabSet)}.`;
+    }
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown error";
     resultReport.textContent =
-      `Could not email ${vocabSet.teacherEmail} automatically. ${detail}`;
-    showMailtoFallback(report, true);
+      `Could not save your results for the class report. ${detail}`;
   }
 }
 
 function startPractice(studentEmail) {
+  if (isDueExpired(vocabSet)) {
+    setupClosed();
+    return;
+  }
+
   state.studentEmail = studentEmail;
   state.correct = 0;
   state.attempted = 0;
@@ -323,13 +317,27 @@ function setupGate() {
   setLabel.textContent = vocabSet.setName;
   gateTitle.textContent = vocabSet.setName;
   gateLede.textContent =
-    `Practice is due ${formatDueDate(vocabSet.dueDate)}. Enter your school email to begin. You’ll have ten minutes to match definitions to terms.`;
+    `Practice is due ${formatDueAt(vocabSet)}. Enter your school email to begin. You’ll have ten minutes to match definitions to terms.`;
   showPanel(gatePanel);
   gateForm.studentEmail.focus();
 }
 
+function setupClosed() {
+  setLabel.textContent = vocabSet.setName;
+  document.querySelector("#closed-lede").textContent =
+    `Practice for “${vocabSet.setName}” closed ${formatDueAt(vocabSet)}. Your teacher will receive one class report for everyone who practiced.`;
+  showPanel(closedPanel);
+  const closedReport = document.querySelector("#closed-report");
+  closedReport.textContent = "Checking the class report…";
+  maybeSendClassReport().then((result) => {
+    closedReport.textContent = result?.message || "";
+  });
+}
+
 if (!vocabSet) {
   showPanel(missingPanel);
+} else if (isDueExpired(vocabSet)) {
+  setupClosed();
 } else {
   setupGate();
 }
@@ -366,6 +374,9 @@ tryAgainButton.addEventListener("click", () => {
   state.ended = false;
   gateForm.reset();
   setFieldError("");
-  showMailtoFallback(null, false);
+  if (isDueExpired(vocabSet)) {
+    setupClosed();
+    return;
+  }
   setupGate();
 });

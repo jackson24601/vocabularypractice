@@ -23,6 +23,12 @@
       </header>
 
       <main class="main">
+        <section id="closed-panel" class="panel" hidden>
+          <h1>Practice has closed</h1>
+          <p class="lede" id="closed-lede"></p>
+          <p id="closed-report" class="hint"></p>
+        </section>
+
         <section id="missing-panel" class="panel" hidden>
           <h1>Practice link needed</h1>
           <p>
@@ -46,7 +52,8 @@
                 placeholder="you@student.school.edu"
               />
               <p class="hint">
-                Your teacher will receive a report when you finish.
+                Your results are saved for the class report after the due date
+                and time.
               </p>
               <p class="field-error" data-error-for="studentEmail" hidden></p>
             </div>
@@ -108,7 +115,7 @@
               <dd id="result-time"></dd>
             </div>
             <div>
-              <dt>Report</dt>
+              <dt>Results</dt>
               <dd id="result-report"></dd>
             </div>
           </dl>
@@ -116,14 +123,6 @@
             <button type="button" id="try-again" class="btn btn-primary">
               Try again
             </button>
-            <a
-              id="mailto-report"
-              class="btn btn-secondary"
-              hidden
-              href="#"
-            >
-              Open email draft
-            </a>
           </div>
         </section>
       </main>

@@ -1,8 +1,12 @@
 import {
   MAX_TERMS,
   MIN_TERMS,
+  buildReportLink,
   buildStudentLink,
-  formatDueDate,
+  createReportStore,
+  dueAtFromInputs,
+  formatDueAt,
+  loadSets,
   saveSet,
   todayIsoDate,
 } from "./shared.js";
@@ -15,8 +19,14 @@ const termRowTemplate = document.querySelector("#term-row-template");
 const successPanel = document.querySelector("#success-panel");
 const createAnotherButton = document.querySelector("#create-another");
 const copyLinkButton = document.querySelector("#copy-link");
+const copyReportLinkButton = document.querySelector("#copy-report-link");
 const studentLinkInput = document.querySelector("#student-link");
+const reportLinkInput = document.querySelector("#report-link");
 const dueDateInput = document.querySelector("#due-date");
+const dueTimeInput = document.querySelector("#due-time");
+const submitButton = form.querySelector('button[type="submit"]');
+const savedSetsSection = document.querySelector("#saved-sets");
+const savedSetsList = document.querySelector("#saved-sets-list");
 
 function getTermRows() {
   return [...termsList.querySelectorAll(".term-row")];
@@ -71,7 +81,9 @@ function clearValidationState() {
   form.querySelectorAll(".invalid").forEach((el) => {
     el.classList.remove("invalid");
   });
-  ["setName", "dueDate", "teacherEmail", "terms"].forEach(clearFieldError);
+  ["setName", "dueDate", "dueTime", "teacherEmail", "terms"].forEach(
+    clearFieldError,
+  );
 }
 
 function addTermRow(focus = false) {
@@ -109,8 +121,10 @@ function validateForm() {
   let valid = true;
   const setName = form.setName.value.trim();
   const dueDate = form.dueDate.value;
+  const dueTime = form.dueTime.value;
   const teacherEmail = form.teacherEmail.value.trim();
   const terms = collectTerms();
+  const dueAt = dueAtFromInputs(dueDate, dueTime);
 
   if (!setName) {
     form.setName.classList.add("invalid");
@@ -122,9 +136,16 @@ function validateForm() {
     form.dueDate.classList.add("invalid");
     setFieldError("dueDate", "Choose a due date for practice.");
     valid = false;
-  } else if (dueDate < todayIsoDate()) {
+  }
+
+  if (!dueTime) {
+    form.dueTime.classList.add("invalid");
+    setFieldError("dueTime", "Choose a due time for practice.");
+    valid = false;
+  } else if (dueAt && dueAt.getTime() <= Date.now()) {
     form.dueDate.classList.add("invalid");
-    setFieldError("dueDate", "Due date can’t be in the past.");
+    form.dueTime.classList.add("invalid");
+    setFieldError("dueTime", "Due date and time can’t be in the past.");
     valid = false;
   }
 
@@ -132,7 +153,7 @@ function validateForm() {
     form.teacherEmail.classList.add("invalid");
     setFieldError(
       "teacherEmail",
-      "Enter an email address for student reports.",
+      "Enter an email address for the class report.",
     );
     valid = false;
   } else if (!form.teacherEmail.checkValidity()) {
@@ -181,6 +202,8 @@ function validateForm() {
     data: {
       setName,
       dueDate,
+      dueTime,
+      dueAt: dueAt ? dueAt.toISOString() : null,
       teacherEmail,
       terms: filledTerms.map(({ term, definition }) => ({ term, definition })),
     },
@@ -188,33 +211,72 @@ function validateForm() {
 }
 
 function showSuccess(set) {
-  const link = buildStudentLink(set);
+  const studentLink = buildStudentLink(set);
+  const reportLink = buildReportLink(set);
   form.hidden = true;
   successPanel.hidden = false;
   document.querySelector("#success-message").textContent =
-    `“${set.setName}” is ready. Share the student link below. Reports will go to ${set.teacherEmail}.`;
+    `“${set.setName}” is ready. Share the student link below. One class report will go to ${set.teacherEmail} after ${formatDueAt(set)}.`;
   document.querySelector("#success-name").textContent = set.setName;
-  document.querySelector("#success-due").textContent = formatDueDate(set.dueDate);
+  document.querySelector("#success-due").textContent = formatDueAt(set);
   document.querySelector("#success-email").textContent = set.teacherEmail;
   document.querySelector("#success-terms").textContent = String(set.terms.length);
-  studentLinkInput.value = link;
+  studentLinkInput.value = studentLink;
+  reportLinkInput.value = reportLink;
   copyLinkButton.textContent = "Copy link";
+  copyReportLinkButton.textContent = "Copy link";
   studentLinkInput.focus();
   studentLinkInput.select();
+  renderSavedSets();
 }
 
-async function copyStudentLink() {
-  const link = studentLinkInput.value;
-  if (!link) return;
+async function copyText(input, button) {
+  const value = input.value;
+  if (!value) return;
 
   try {
-    await navigator.clipboard.writeText(link);
-    copyLinkButton.textContent = "Copied";
+    await navigator.clipboard.writeText(value);
+    button.textContent = "Copied";
   } catch {
-    studentLinkInput.focus();
-    studentLinkInput.select();
-    copyLinkButton.textContent = "Select & copy";
+    input.focus();
+    input.select();
+    button.textContent = "Select & copy";
   }
+}
+
+function renderSavedSets() {
+  const sets = loadSets();
+  if (!savedSetsSection || !savedSetsList) return;
+  savedSetsList.innerHTML = "";
+  if (sets.length === 0) {
+    savedSetsSection.hidden = true;
+    return;
+  }
+
+  savedSetsSection.hidden = false;
+  sets.slice(0, 8).forEach((set) => {
+    const item = document.createElement("li");
+    item.className = "saved-set";
+    const title = document.createElement("p");
+    title.className = "saved-set-name";
+    title.textContent = set.setName;
+    const meta = document.createElement("p");
+    meta.className = "saved-set-meta";
+    meta.textContent = `Due ${formatDueAt(set)}`;
+    const actions = document.createElement("div");
+    actions.className = "saved-set-actions";
+    const student = document.createElement("a");
+    student.className = "btn btn-secondary";
+    student.href = buildStudentLink(set);
+    student.textContent = "Student link";
+    const report = document.createElement("a");
+    report.className = "btn btn-primary";
+    report.href = buildReportLink(set);
+    report.textContent = "Class report";
+    actions.append(student, report);
+    item.append(title, meta, actions);
+    savedSetsList.appendChild(item);
+  });
 }
 
 function resetForm() {
@@ -224,9 +286,12 @@ function resetForm() {
     addTermRow();
   }
   dueDateInput.min = todayIsoDate();
+  dueTimeInput.value = "23:59";
   clearValidationState();
   successPanel.hidden = true;
   form.hidden = false;
+  submitButton.disabled = false;
+  submitButton.textContent = "Create practice set";
   form.setName.focus();
 }
 
@@ -244,7 +309,7 @@ addTermButton.addEventListener("click", (event) => {
   addTermRow(true);
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const { valid, data } = validateForm();
   if (!valid) {
@@ -253,14 +318,29 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
+  submitButton.disabled = true;
+  submitButton.textContent = "Setting up class reports…";
+
   const set = {
     id: crypto.randomUUID(),
     ...data,
     createdAt: new Date().toISOString(),
   };
 
-  saveSet(set);
-  showSuccess(set);
+  try {
+    const store = await createReportStore(set);
+    const completeSet = { ...set, ...store };
+    saveSet(completeSet);
+    showSuccess(completeSet);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown error";
+    setFieldError(
+      "teacherEmail",
+      `Could not set up class reports. ${detail}`,
+    );
+    submitButton.disabled = false;
+    submitButton.textContent = "Create practice set";
+  }
 });
 
 createAnotherButton.addEventListener("click", () => {
@@ -268,11 +348,17 @@ createAnotherButton.addEventListener("click", () => {
 });
 
 copyLinkButton.addEventListener("click", () => {
-  copyStudentLink();
+  copyText(studentLinkInput, copyLinkButton);
+});
+
+copyReportLinkButton.addEventListener("click", () => {
+  copyText(reportLinkInput, copyReportLinkButton);
 });
 
 dueDateInput.min = todayIsoDate();
+dueTimeInput.value = dueTimeInput.value || "23:59";
 for (let i = 0; i < MIN_TERMS; i += 1) {
   addTermRow();
 }
+renderSavedSets();
 form.setName.focus();

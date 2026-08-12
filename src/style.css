@@ -181,6 +181,10 @@ body::before {
   gap: 1rem;
 }
 
+.due-fields {
+  grid-template-columns: 1fr 1fr;
+}
+
 label {
   font-size: 0.88rem;
   font-weight: 500;
@@ -342,9 +346,14 @@ textarea.invalid {
 
 .btn:disabled,
 .btn[aria-disabled="true"] {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-primary:disabled {
+  background: color-mix(in srgb, var(--moss) 45%, var(--paper-deep));
+  color: var(--ink-soft);
 }
 
 .btn-icon {
@@ -428,6 +437,99 @@ textarea.invalid {
 
 .share-row input {
   font-size: 0.9rem;
+}
+
+.saved-sets {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.saved-sets[hidden] {
+  display: none;
+}
+
+.saved-sets h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.saved-sets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.saved-set {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--paper) 88%, white);
+}
+
+.saved-set-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.saved-set-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.saved-set-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.report-summary {
+  margin: 0.25rem 0 0;
+}
+
+.report-summary p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.report-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .panel {
@@ -677,11 +779,14 @@ a.btn {
   }
 
   .field-row,
+  .due-fields,
   .term-row,
   .success-meta,
   .share-row,
   .practice-hud,
-  .options {
+  .options,
+  .saved-set-actions,
+  .report-toolbar {
     grid-template-columns: 1fr;
   }
 
