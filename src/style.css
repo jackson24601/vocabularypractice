@@ -163,6 +163,12 @@ body::before {
   gap: 0.5rem 1rem;
 }
 
+.upload-row {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+}
+
 .term-count {
   margin: 0;
   color: var(--muted);
@@ -226,6 +232,18 @@ input.invalid,
 textarea.invalid {
   border-color: color-mix(in srgb, var(--danger) 55%, white);
   box-shadow: 0 0 0 3px rgba(155, 47, 47, 0.12);
+}
+
+input.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .hint {

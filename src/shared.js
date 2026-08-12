@@ -10,7 +10,7 @@ import {
 
 export const STORAGE_KEY = "wordnest.vocabularySets";
 export const REPORTS_KEY = "wordnest.practiceReports";
-export const MAX_TERMS = 10;
+export const MAX_TERMS = 50;
 export const MIN_TERMS = 4;
 export const PRACTICE_DURATION_MS = 10 * 60 * 1000;
 export const DEFINITION_REVEAL_MS = 3000;
@@ -68,8 +68,10 @@ export function encodeSetPayload(set) {
     teacherEmail: set.teacherEmail,
     storeId: set.storeId,
     storeEditKey: set.storeEditKey,
-    terms: set.terms,
   };
+  if (Array.isArray(set.terms) && set.terms.length && !set.storeId) {
+    payload.terms = set.terms;
+  }
   const json = JSON.stringify(payload);
   const base64 = btoa(unescape(encodeURIComponent(json)));
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
@@ -85,10 +87,14 @@ export function decodeSetPayload(encoded) {
     const payload = JSON.parse(json);
     if (
       !payload ||
-      typeof payload.setName !== "string" ||
-      !Array.isArray(payload.terms) ||
-      payload.terms.length < MIN_TERMS
+      typeof payload.setName !== "string"
     ) {
+      return null;
+    }
+    const hasTerms =
+      Array.isArray(payload.terms) && payload.terms.length >= MIN_TERMS;
+    const hasStore = typeof payload.storeId === "string" && payload.storeId;
+    if (!hasTerms && !hasStore) {
       return null;
     }
     return payload;
@@ -111,6 +117,40 @@ export function buildStudentLink(set) {
 
 export function buildReportLink(set) {
   return buildAppLink("report.html", set);
+}
+
+export async function resolveVocabSet(payload) {
+  if (!payload) return null;
+
+  let set = { ...payload };
+  if (payload.storeId) {
+    try {
+      const store = await readReportStore(payload.storeId);
+      set = {
+        ...payload,
+        setName: store.setName || payload.setName,
+        dueDate: store.dueDate || payload.dueDate,
+        dueTime: store.dueTime || payload.dueTime,
+        dueAt: store.dueAt || payload.dueAt,
+        teacherEmail: store.teacherEmail || payload.teacherEmail,
+        terms:
+          Array.isArray(store.terms) && store.terms.length > 0
+            ? store.terms
+            : payload.terms,
+      };
+    } catch {
+      // Use the link payload if the store cannot be read.
+    }
+  }
+
+  if (
+    typeof set.setName !== "string" ||
+    !Array.isArray(set.terms) ||
+    set.terms.length < MIN_TERMS
+  ) {
+    return null;
+  }
+  return set;
 }
 
 export function saveReport(report) {

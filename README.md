@@ -9,7 +9,7 @@ Teachers can:
 - Name a vocabulary set
 - Set a practice due date and time
 - Enter an email address for the class report
-- Add 4–10 terms and definitions
+- Add 4–50 terms and definitions, or upload a CSV
 - Copy a shareable student practice link
 - Bookmark a class report page
 

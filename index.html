@@ -26,8 +26,9 @@
         <section class="intro" aria-labelledby="page-title">
           <h1 id="page-title">Create a practice set</h1>
           <p class="lede">
-            Add four to ten terms, set a due date and time, and tell us where
-            to send the class report. You’ll get a shareable practice link.
+            Add at least four terms (up to 50), set a due date and time, and
+            tell us where to send the class report. You’ll get a shareable
+            practice link.
           </p>
         </section>
 
@@ -92,7 +93,23 @@
             <div class="terms-header">
               <h2 id="terms-heading">Terms &amp; definitions</h2>
               <p class="term-count" id="term-count" aria-live="polite">
-                4 of 10 terms
+                4 of 50 terms
+              </p>
+            </div>
+
+            <div class="upload-row">
+              <input
+                id="terms-file"
+                class="file-input"
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+              />
+              <label for="terms-file" class="btn btn-secondary">
+                Upload CSV
+              </label>
+              <p class="hint">
+                CSV or tab-separated file with a term and definition on each
+                row. You can upload up to 50, or add them one at a time below.
               </p>
             </div>
 

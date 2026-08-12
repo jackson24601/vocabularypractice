@@ -4,12 +4,14 @@ import {
   getPracticeConfig,
   isDueExpired,
   pickQuestion,
+  resolveVocabSet,
   saveReport,
   saveStudentReport,
   sendClassReportIfDue,
 } from "./shared.js";
 
 const missingPanel = document.querySelector("#missing-panel");
+const loadingPanel = document.querySelector("#loading-panel");
 const closedPanel = document.querySelector("#closed-panel");
 const gatePanel = document.querySelector("#gate-panel");
 const practicePanel = document.querySelector("#practice-panel");
@@ -28,8 +30,8 @@ const optionsEl = document.querySelector("#options");
 const tryAgainButton = document.querySelector("#try-again");
 
 const params = new URLSearchParams(window.location.search);
-const vocabSet = decodeSetPayload(params.get("set"));
 const config = getPracticeConfig();
+let vocabSet = null;
 
 const state = {
   studentName: "",
@@ -63,7 +65,7 @@ function later(fn, ms) {
 }
 
 function showPanel(panel) {
-  [missingPanel, closedPanel, gatePanel, practicePanel, resultPanel].forEach(
+  [missingPanel, loadingPanel, closedPanel, gatePanel, practicePanel, resultPanel].forEach(
     (el) => {
       if (!el) return;
       el.hidden = el !== panel;
@@ -324,12 +326,24 @@ function setupClosed() {
   });
 }
 
-if (!vocabSet) {
+if (!params.get("set")) {
   showPanel(missingPanel);
-} else if (isDueExpired(vocabSet)) {
-  setupClosed();
 } else {
-  setupGate();
+  showPanel(loadingPanel);
+  resolveVocabSet(decodeSetPayload(params.get("set")))
+    .then((set) => {
+      vocabSet = set;
+      if (!vocabSet) {
+        showPanel(missingPanel);
+      } else if (isDueExpired(vocabSet)) {
+        setupClosed();
+      } else {
+        setupGate();
+      }
+    })
+    .catch(() => {
+      showPanel(missingPanel);
+    });
 }
 
 gateForm?.addEventListener("submit", (event) => {
