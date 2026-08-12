@@ -1,3 +1,13 @@
+import {
+  buildClassReportEmail,
+  formatDueAt,
+  isDueExpired,
+} from "./reportUtils.js";
+import {
+  readReportStore,
+  updateStoreFlags,
+} from "./store.js";
+
 export const STORAGE_KEY = "wordnest.vocabularySets";
 export const REPORTS_KEY = "wordnest.practiceReports";
 export const MAX_TERMS = 10;
@@ -7,6 +17,15 @@ export const DEFINITION_REVEAL_MS = 3000;
 export const FEEDBACK_MS = 1800;
 export const PASSING_SCORE = 75;
 export const MIN_CORRECT = 50;
+
+export {
+  dueAtFromInputs,
+  formatDueAt,
+  getDueAt,
+  isDueExpired,
+  summarizeReports,
+} from "./reportUtils.js";
+export { createReportStore, readReportStore, saveStudentReport } from "./store.js";
 
 export function todayIsoDate() {
   const now = new Date();
@@ -46,7 +65,11 @@ export function encodeSetPayload(set) {
     id: set.id,
     setName: set.setName,
     dueDate: set.dueDate,
+    dueTime: set.dueTime,
+    dueAt: set.dueAt,
     teacherEmail: set.teacherEmail,
+    storeId: set.storeId,
+    storeEditKey: set.storeEditKey,
     terms: set.terms,
   };
   const json = JSON.stringify(payload);
@@ -76,12 +99,20 @@ export function decodeSetPayload(encoded) {
   }
 }
 
-export function buildStudentLink(set) {
+function buildAppLink(page, set) {
   // Resolve relative to the current page so GitHub Pages project URLs work
   // (e.g. https://user.github.io/vocabularypractice/).
-  const url = new URL("student.html", window.location.href);
+  const url = new URL(page, window.location.href);
   url.searchParams.set("set", encodeSetPayload(set));
   return url.toString();
+}
+
+export function buildStudentLink(set) {
+  return buildAppLink("student.html", set);
+}
+
+export function buildReportLink(set) {
+  return buildAppLink("report.html", set);
 }
 
 export function saveReport(report) {
@@ -96,41 +127,18 @@ export function saveReport(report) {
   }
 }
 
-function formatCompletedAt(isoString) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(isoString));
-  } catch {
-    return isoString;
-  }
-}
-
 /**
- * Email a completion report to the teacher via FormSubmit.
+ * Email one class report to the teacher via FormSubmit after the due time.
  * The first report to a new address may require the teacher to click an
  * activation link FormSubmit sends them.
  */
-export async function sendCompletionEmail(report) {
-  const teacherEmail = report.teacherEmail?.trim();
+export async function sendClassReportEmail(set, reports) {
+  const teacherEmail = set.teacherEmail?.trim();
   if (!teacherEmail) {
     throw new Error("Missing teacher email address.");
   }
 
-  const subject = `WordNest: ${report.studentEmail} completed ${report.setName}`;
-  const message = [
-    "A student completed vocabulary practice on WordNest.",
-    "",
-    `Vocabulary set: ${report.setName}`,
-    `Student email: ${report.studentEmail}`,
-    `Correct matches: ${report.correct}`,
-    `Total attempts: ${report.attempted}`,
-    `Accuracy: ${report.accuracy}%`,
-    `Time practiced: ${Math.round(report.durationMs / 60000)} minutes`,
-    `Completed: ${formatCompletedAt(report.completedAt)}`,
-  ].join("\n");
-
+  const email = buildClassReportEmail(set, reports);
   const response = await fetch(
     `https://formsubmit.co/ajax/${encodeURIComponent(teacherEmail)}`,
     {
@@ -140,18 +148,17 @@ export async function sendCompletionEmail(report) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        _subject: subject,
-        _template: "table",
+        _subject: email.subject,
+        _template: "box",
         _captcha: "false",
-        name: report.studentEmail,
-        email: report.studentEmail,
-        studentEmail: report.studentEmail,
-        setName: report.setName,
-        correctMatches: report.correct,
-        attempts: report.attempted,
-        accuracy: `${report.accuracy}%`,
-        completedAt: formatCompletedAt(report.completedAt),
-        message,
+        name: "WordNest class report",
+        email: teacherEmail,
+        setName: set.setName,
+        dueAt: formatDueAt(set),
+        studentsPracticed: email.studentCount,
+        passed: email.passedCount,
+        notPassed: email.studentCount - email.passedCount,
+        message: email.message,
       }),
     },
   );
@@ -176,7 +183,7 @@ export async function sendCompletionEmail(report) {
     return {
       status: "activation_required",
       message:
-        `Almost there: check ${teacherEmail} for a FormSubmit “Activate Form” email, click the link, then have the student complete practice once more so the report can send.`,
+        `Almost there: check ${teacherEmail} for a FormSubmit “Activate Form” email, click the link, then open the class report page again so the report can send.`,
     };
   }
 
@@ -186,8 +193,52 @@ export async function sendCompletionEmail(report) {
 
   return {
     status: "sent",
-    message: `Report emailed to ${teacherEmail}`,
+    message: `Class report emailed to ${teacherEmail}`,
+    studentCount: email.studentCount,
   };
+}
+
+export async function sendClassReportIfDue(set, { force = false } = {}) {
+  if (!set?.storeId || !set?.storeEditKey) {
+    throw new Error("This practice set is missing class report storage.");
+  }
+  if (!force && !isDueExpired(set)) {
+    return {
+      status: "waiting",
+      message: `Class report will email after ${formatDueAt(set)}.`,
+    };
+  }
+
+  const store = await readReportStore(set.storeId);
+  if (!force && store.summarySent) {
+    return {
+      status: "already_sent",
+      message: `Class report already emailed to ${set.teacherEmail}.`,
+      sentAt: store.summarySentAt,
+    };
+  }
+
+  await updateStoreFlags(set, {
+    summarySent: true,
+    summarySentAt: new Date().toISOString(),
+  });
+
+  try {
+    const result = await sendClassReportEmail(set, store.reports || []);
+    if (result.status === "activation_required") {
+      await updateStoreFlags(set, {
+        summarySent: false,
+        summarySentAt: null,
+      });
+    }
+    return result;
+  } catch (error) {
+    await updateStoreFlags(set, {
+      summarySent: false,
+      summarySentAt: null,
+    });
+    throw error;
+  }
 }
 
 export function shuffle(items) {

@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         student: resolve(__dirname, "student.html"),
+        report: resolve(__dirname, "report.html"),
       },
     },
   },

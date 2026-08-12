@@ -7,10 +7,11 @@ A simple web app that helps teachers create vocabulary practice sets for student
 Teachers can:
 
 - Name a vocabulary set
-- Set a practice due date
-- Enter an email address for student completion reports
+- Set a practice due date and time
+- Enter an email address for the class report
 - Add 4–10 terms and definitions
 - Copy a shareable student practice link
+- Bookmark a class report page
 
 ## Student practice
 
@@ -27,12 +28,13 @@ Practice is complete when the student:
 - Scores 75% or higher
 - Gets at least 50 correct matches
 
-When those requirements are met, WordNest emails a completion report to the
-teacher address on the set (via [FormSubmit](https://formsubmit.co/)). The first
-report to a new teacher email may require clicking an activation link FormSubmit
-sends to that inbox.
+Student results are saved as they finish. WordNest does **not** email the teacher after each student. When the due date and time have passed, WordNest emails **one class report** listing every student who practiced (via [FormSubmit](https://formsubmit.co/)). The first report to a new teacher email may require clicking an activation link FormSubmit sends to that inbox.
 
-Sets travel in the student link itself, so teachers can share the URL directly.
+Leave the class report page open until the due time, or reopen it after the deadline. If a student opens the practice link after the window closes, that also tries to send the class report.
+
+New practice sessions cannot start after the due time.
+
+Sets travel in the student and class-report links themselves, so teachers can share those URLs directly.
 
 ## Live site
 
@@ -49,8 +51,13 @@ npm run dev
 
 - Teacher page: `http://localhost:5173/`
 - Student page needs a generated link from the teacher success screen
+- Class report page is the second link on the success screen
 
-For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session).
+For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session). To test the class report email, set the due time a minute or two ahead and leave the class report page open.
+
+```bash
+npm test
+```
 
 ## Build
 
