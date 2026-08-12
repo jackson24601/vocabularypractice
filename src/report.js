@@ -49,22 +49,26 @@ function renderRows(summary) {
     return;
   }
 
-  const passed = summary.filter((item) => item.best?.passed).length;
+  const attemptCount = summary.reduce(
+    (total, item) => total + item.attempts.length,
+    0,
+  );
   countsEl.textContent =
-    `${summary.length} student${summary.length === 1 ? "" : "s"} practiced · ${passed} passed · ${summary.length - passed} not yet passed`;
+    `${summary.length} student${summary.length === 1 ? "" : "s"} · ${attemptCount} score${attemptCount === 1 ? "" : "s"}`;
 
   rowsEl.innerHTML = "";
   summary.forEach((item) => {
-    const row = document.createElement("tr");
-    const status = item.best?.passed ? "Passed" : "Not passed";
-    row.innerHTML = `
-      <td>${escapeHtml(item.studentEmail)}</td>
-      <td>${status}</td>
-      <td>${item.best?.accuracy ?? 0}%</td>
-      <td>${item.best?.correct ?? 0} / ${item.best?.attempted ?? 0}</td>
-      <td>${item.attempts}</td>
-    `;
-    rowsEl.appendChild(row);
+    item.attempts.forEach((attempt, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${escapeHtml(item.name)}</td>
+        <td>${index + 1}</td>
+        <td>${attempt.accuracy ?? 0}%</td>
+        <td>${attempt.correct ?? 0} / ${attempt.attempted ?? 0}</td>
+        <td>${attempt.completedAt ? formatDueAt(attempt.completedAt) : "—"}</td>
+      `;
+      rowsEl.appendChild(row);
+    });
   });
 }
 

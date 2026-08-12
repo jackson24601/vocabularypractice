@@ -32,7 +32,7 @@ const vocabSet = decodeSetPayload(params.get("set"));
 const config = getPracticeConfig();
 
 const state = {
-  studentEmail: "",
+  studentName: "",
   correct: 0,
   attempted: 0,
   recentIndex: -1,
@@ -72,8 +72,8 @@ function showPanel(panel) {
 }
 
 function setFieldError(message) {
-  const error = document.querySelector('[data-error-for="studentEmail"]');
-  const input = gateForm.studentEmail;
+  const error = document.querySelector('[data-error-for="studentName"]');
+  const input = gateForm.studentName;
   if (!message) {
     error.hidden = true;
     error.textContent = "";
@@ -203,14 +203,6 @@ function handleAnswer(selectedTerm) {
   }, config.feedbackMs);
 }
 
-function passedPractice() {
-  const percent = accuracyPercent() ?? 0;
-  return (
-    state.correct >= config.minCorrect &&
-    percent >= config.passingScore
-  );
-}
-
 async function maybeSendClassReport() {
   if (!vocabSet?.storeId) return null;
   try {
@@ -228,7 +220,6 @@ async function endPractice() {
   clearTick();
 
   const percent = accuracyPercent() ?? 0;
-  const passed = passedPractice();
   const resultReport = document.querySelector("#result-report");
 
   const report = {
@@ -236,23 +227,19 @@ async function endPractice() {
     setId: vocabSet.id,
     setName: vocabSet.setName,
     teacherEmail: vocabSet.teacherEmail,
-    studentEmail: state.studentEmail,
+    studentName: state.studentName,
     correct: state.correct,
     attempted: state.attempted,
     accuracy: percent,
     durationMs: config.practiceMs,
-    passed,
     completedAt: new Date().toISOString(),
   };
   saveReport(report);
 
   showPanel(resultPanel);
-  document.querySelector("#result-title").textContent = passed
-    ? "Practice complete"
-    : "Keep practicing";
-  document.querySelector("#result-message").textContent = passed
-    ? `Nice work. You practiced for ${config.fast ? "the full session" : "ten minutes"}, scored ${percent}%, and got ${state.correct} correct matches.`
-    : `To finish, you need ${config.fast ? "the full session" : "ten minutes"}, at least ${config.minCorrect} correct matches, and ${config.passingScore}% accuracy or higher. You scored ${percent}% with ${state.correct} correct.`;
+  document.querySelector("#result-title").textContent = "Practice complete";
+  document.querySelector("#result-message").textContent =
+    `You practiced for ${config.fast ? "the full session" : "ten minutes"}, scored ${percent}%, and got ${state.correct} correct matches. You can practice again as many times as you want before ${formatDueAt(vocabSet)}.`;
   document.querySelector("#result-correct").textContent =
     `${state.correct} / ${state.attempted}`;
   document.querySelector("#result-accuracy").textContent = `${percent}%`;
@@ -283,13 +270,13 @@ async function endPractice() {
   }
 }
 
-function startPractice(studentEmail) {
+function startPractice(studentName) {
   if (isDueExpired(vocabSet)) {
     setupClosed();
     return;
   }
 
-  state.studentEmail = studentEmail;
+  state.studentName = studentName;
   state.correct = 0;
   state.attempted = 0;
   state.recentIndex = -1;
@@ -317,9 +304,12 @@ function setupGate() {
   setLabel.textContent = vocabSet.setName;
   gateTitle.textContent = vocabSet.setName;
   gateLede.textContent =
-    `Practice is due ${formatDueAt(vocabSet)}. Enter your school email to begin. You’ll have ten minutes to match definitions to terms.`;
+    `Practice is due ${formatDueAt(vocabSet)}. Enter your name to begin. You’ll have ten minutes to match definitions to terms, and you can practice as many times as you want.`;
   showPanel(gatePanel);
-  gateForm.studentEmail.focus();
+  if (state.studentName) {
+    gateForm.studentName.value = state.studentName;
+  }
+  gateForm.studentName.focus();
 }
 
 function setupClosed() {
@@ -344,21 +334,16 @@ if (!vocabSet) {
 
 gateForm?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const email = gateForm.studentEmail.value.trim();
+  const name = gateForm.studentName.value.trim();
   setFieldError("");
 
-  if (!email) {
-    setFieldError("Enter your school email to begin.");
-    gateForm.studentEmail.focus();
-    return;
-  }
-  if (!gateForm.studentEmail.checkValidity()) {
-    setFieldError("Enter a valid school email address.");
-    gateForm.studentEmail.focus();
+  if (!name) {
+    setFieldError("Enter your name to begin.");
+    gateForm.studentName.focus();
     return;
   }
 
-  startPractice(email);
+  startPractice(name);
 });
 
 optionsEl.addEventListener("click", (event) => {
@@ -372,11 +357,10 @@ tryAgainButton.addEventListener("click", () => {
   clearTick();
   state.running = false;
   state.ended = false;
-  gateForm.reset();
   setFieldError("");
   if (isDueExpired(vocabSet)) {
     setupClosed();
     return;
   }
-  setupGate();
+  startPractice(state.studentName);
 });

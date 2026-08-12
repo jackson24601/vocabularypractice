@@ -72,51 +72,45 @@ export function appendReport(store, report) {
   return { ...store, reports };
 }
 
-function isBetterReport(candidate, current) {
-  if (Boolean(candidate.passed) !== Boolean(current.passed)) {
-    return Boolean(candidate.passed);
-  }
-  if ((candidate.correct || 0) !== (current.correct || 0)) {
-    return (candidate.correct || 0) > (current.correct || 0);
-  }
-  if ((candidate.accuracy || 0) !== (current.accuracy || 0)) {
-    return (candidate.accuracy || 0) > (current.accuracy || 0);
-  }
-  return (
-    new Date(candidate.completedAt || 0).getTime() >
-    new Date(current.completedAt || 0).getTime()
-  );
+export function studentLabel(report) {
+  const name = String(report?.studentName || "").trim();
+  if (name) return name;
+  return String(report?.studentEmail || "").trim();
 }
 
 export function summarizeReports(reports) {
-  const byEmail = new Map();
+  const byName = new Map();
   for (const report of reports || []) {
-    const email = String(report?.studentEmail || "").trim().toLowerCase();
-    if (!email) continue;
-    const existing = byEmail.get(email);
+    const name = studentLabel(report);
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const existing = byName.get(key);
     if (!existing) {
-      byEmail.set(email, {
-        studentEmail: report.studentEmail,
-        attempts: 1,
-        best: report,
-      });
+      byName.set(key, { name, attempts: [report] });
       continue;
     }
-    existing.attempts += 1;
-    if (isBetterReport(report, existing.best)) {
-      existing.best = report;
-    }
+    existing.attempts.push(report);
   }
-  return [...byEmail.values()].sort((a, b) =>
-    a.studentEmail.localeCompare(b.studentEmail, undefined, {
-      sensitivity: "base",
-    }),
+
+  const groups = [...byName.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
   );
+  for (const group of groups) {
+    group.attempts.sort(
+      (a, b) =>
+        new Date(a.completedAt || 0).getTime() -
+        new Date(b.completedAt || 0).getTime(),
+    );
+  }
+  return groups;
 }
 
 export function buildClassReportEmail(set, reports) {
   const summary = summarizeReports(reports);
-  const passedCount = summary.filter((item) => item.best?.passed).length;
+  const attemptCount = summary.reduce(
+    (total, item) => total + item.attempts.length,
+    0,
+  );
   const setName = set?.setName || "Vocabulary practice";
   const dueLabel = formatDueAt(set) || "the due time";
   const lines = [
@@ -124,39 +118,40 @@ export function buildClassReportEmail(set, reports) {
     `Practice window ended ${dueLabel}.`,
     "",
     `Students who practiced: ${summary.length}`,
-    `Passed: ${passedCount}`,
-    `Not yet passed: ${summary.length - passedCount}`,
+    `Total attempts: ${attemptCount}`,
     "",
   ];
 
   if (summary.length === 0) {
     lines.push("No students completed practice before this report was sent.");
   } else {
-    lines.push("Student results (best attempt):");
+    lines.push("Student scores (every attempt):");
     lines.push("");
     for (const item of summary) {
-      const best = item.best;
-      const status = best.passed ? "Passed" : "Not passed";
-      lines.push(
-        [
-          item.studentEmail,
-          status,
-          `Accuracy ${best.accuracy ?? 0}%`,
-          `Correct ${best.correct ?? 0}/${best.attempted ?? 0}`,
-          `Sessions ${item.attempts}`,
-          best.completedAt ? `Last try ${formatCompletedAt(best.completedAt)}` : "",
-        ]
-          .filter(Boolean)
-          .join(" — "),
-      );
+      lines.push(item.name);
+      item.attempts.forEach((attempt, index) => {
+        lines.push(
+          [
+            `  ${index + 1}.`,
+            `${attempt.accuracy ?? 0}%`,
+            `(${attempt.correct ?? 0}/${attempt.attempted ?? 0} correct)`,
+            attempt.completedAt
+              ? formatCompletedAt(attempt.completedAt)
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+      });
+      lines.push("");
     }
   }
 
   return {
     subject: `WordNest class report: ${setName}`,
-    message: lines.join("\n"),
+    message: lines.join("\n").trim(),
     studentCount: summary.length,
-    passedCount,
+    attemptCount,
     summary,
   };
 }
