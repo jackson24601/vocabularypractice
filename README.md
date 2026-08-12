@@ -15,20 +15,16 @@ Teachers can:
 
 ## Student practice
 
-Students open the shared link, enter their school email, and begin a timed matching practice:
+Students open the shared link, enter their name, and begin a timed matching practice:
 
 1. A definition appears for 3 seconds
 2. Four term choices appear
 3. Students select the matching term
 4. Score and correct-count stay visible throughout
 
-Practice is complete when the student:
+Practice ends after ten minutes. There is no passing score. Students can take the practice as many times as they want before the due time; every attempt is saved.
 
-- Practices for the full 10 minutes
-- Scores 75% or higher
-- Gets at least 50 correct matches
-
-Student results are saved as they finish. WordNest does **not** email the teacher after each student. When the due date and time have passed, WordNest emails **one class report** listing every student who practiced (via [FormSubmit](https://formsubmit.co/)). The first report to a new teacher email may require clicking an activation link FormSubmit sends to that inbox.
+Student results are saved as they finish. WordNest does **not** email the teacher after each student. When the due date and time have passed, WordNest emails **one class report** listing each student’s name and every score (via [FormSubmit](https://formsubmit.co/)). The first report to a new teacher email may require clicking an activation link FormSubmit sends to that inbox.
 
 Leave the class report page open until the due time, or reopen it after the deadline. If a student opens the practice link after the window closes, that also tries to send the class report.
 
