@@ -86,6 +86,9 @@ function updateCountdown() {
   const expired = remaining <= 0;
   countdownEl.textContent = expired ? "Due time reached" : formatRemaining(remaining);
   sendButton.disabled = sending || !expired;
+  sendButton.title = expired
+    ? "Email the current class results now"
+    : "Available after the due time";
   return { expired, remaining };
 }
 

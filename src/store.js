@@ -43,10 +43,12 @@ async function fetchJson(url, options = {}) {
 
 async function requestJson(url, options = {}) {
   try {
-    return await fetchJson(url, options);
-  } catch (error) {
-    if (url.startsWith(CORS_PROXY)) throw error;
     return await fetchJson(proxyUrl(url), options);
+  } catch (error) {
+    if (!url.startsWith(CORS_PROXY)) {
+      return await fetchJson(url, options);
+    }
+    throw error;
   }
 }
 
