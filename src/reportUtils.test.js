@@ -57,27 +57,24 @@ describe("appendReport", () => {
 });
 
 describe("summarizeReports", () => {
-  it("keeps each student's best attempt and counts sessions", () => {
+  it("groups every attempt by student name and keeps all scores", () => {
     const summary = summarizeReports([
       {
-        studentEmail: "sam@school.edu",
-        passed: false,
+        studentName: "Sam",
         correct: 20,
         accuracy: 50,
         attempted: 40,
-        completedAt: "2026-08-12T10:00:00.000Z",
-      },
-      {
-        studentEmail: "Sam@school.edu",
-        passed: true,
-        correct: 55,
-        accuracy: 80,
-        attempted: 70,
         completedAt: "2026-08-12T11:00:00.000Z",
       },
       {
+        studentName: "sam",
+        correct: 55,
+        accuracy: 80,
+        attempted: 70,
+        completedAt: "2026-08-12T10:00:00.000Z",
+      },
+      {
         studentEmail: "ada@school.edu",
-        passed: false,
         correct: 10,
         accuracy: 40,
         attempted: 25,
@@ -86,44 +83,54 @@ describe("summarizeReports", () => {
     ]);
 
     assert.equal(summary.length, 2);
-    assert.equal(summary[0].studentEmail, "ada@school.edu");
-    assert.equal(summary[1].attempts, 2);
-    assert.equal(summary[1].best.passed, true);
-    assert.equal(summary[1].best.correct, 55);
+    assert.equal(summary[0].name, "ada@school.edu");
+    assert.equal(summary[0].attempts.length, 1);
+    assert.equal(summary[1].name, "Sam");
+    assert.equal(summary[1].attempts.length, 2);
+    assert.equal(summary[1].attempts[0].accuracy, 80);
+    assert.equal(summary[1].attempts[1].accuracy, 50);
   });
 });
 
 describe("buildClassReportEmail", () => {
-  it("includes counts and every student in the message", () => {
+  it("lists every score for each student", () => {
     const email = buildClassReportEmail(
       { setName: "Ecosystems", dueAt: "2026-08-12T19:00:00.000Z" },
       [
         {
-          studentEmail: "ada@school.edu",
-          passed: true,
+          studentName: "Ada",
           correct: 55,
           attempted: 70,
           accuracy: 79,
           completedAt: "2026-08-12T18:00:00.000Z",
         },
         {
-          studentEmail: "sam@school.edu",
-          passed: false,
+          studentName: "Sam",
           correct: 12,
           attempted: 40,
           accuracy: 30,
           completedAt: "2026-08-12T18:10:00.000Z",
+        },
+        {
+          studentName: "Sam",
+          correct: 40,
+          attempted: 50,
+          accuracy: 80,
+          completedAt: "2026-08-12T18:40:00.000Z",
         },
       ],
     );
 
     assert.match(email.subject, /Ecosystems/);
     assert.equal(email.studentCount, 2);
-    assert.equal(email.passedCount, 1);
-    assert.match(email.message, /ada@school.edu/);
-    assert.match(email.message, /sam@school.edu/);
-    assert.match(email.message, /Passed: 1/);
-    assert.match(email.message, /Not yet passed: 1/);
+    assert.equal(email.attemptCount, 3);
+    assert.match(email.message, /Ada/);
+    assert.match(email.message, /Sam/);
+    assert.match(email.message, /79%/);
+    assert.match(email.message, /30%/);
+    assert.match(email.message, /80%/);
+    assert.match(email.message, /Total attempts: 3/);
+    assert.doesNotMatch(email.message, /Passed:/);
   });
 
   it("explains when nobody practiced", () => {
