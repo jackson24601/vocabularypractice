@@ -10,6 +10,7 @@ import {
   saveSet,
   todayIsoDate,
 } from "./shared.js";
+import { parseTermList } from "./termImport.js";
 
 const form = document.querySelector("#vocab-form");
 const termsList = document.querySelector("#terms-list");
@@ -24,6 +25,7 @@ const studentLinkInput = document.querySelector("#student-link");
 const reportLinkInput = document.querySelector("#report-link");
 const dueDateInput = document.querySelector("#due-date");
 const dueTimeInput = document.querySelector("#due-time");
+const termsFileInput = document.querySelector("#terms-file");
 const submitButton = form.querySelector('button[type="submit"]');
 const savedSetsSection = document.querySelector("#saved-sets");
 const savedSetsList = document.querySelector("#saved-sets-list");
@@ -104,6 +106,19 @@ function addTermRow(focus = false) {
   }
 
   return row;
+}
+
+function fillTermRows(terms) {
+  termsList.innerHTML = "";
+  const rows = terms.slice(0, MAX_TERMS);
+  const count = Math.max(rows.length, MIN_TERMS);
+  for (let index = 0; index < count; index += 1) {
+    const row = addTermRow();
+    if (!row || !rows[index]) continue;
+    row.querySelector(".term-input").value = rows[index].term;
+    row.querySelector(".definition-input").value = rows[index].definition;
+  }
+  updateTermUi();
 }
 
 function collectTerms() {
@@ -307,6 +322,36 @@ addTermButton.addEventListener("click", (event) => {
   event.stopPropagation();
   if (addTermButton.disabled) return;
   addTermRow(true);
+});
+
+termsFileInput?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const parsed = parseTermList(text, { maxTerms: MAX_TERMS + 1 });
+    if (parsed.length === 0) {
+      setFieldError(
+        "terms",
+        "That file didn’t have any term and definition pairs. Use a CSV or tab-separated file with a term and definition on each row.",
+      );
+      return;
+    }
+    const truncated = parsed.length > MAX_TERMS;
+    const terms = parsed.slice(0, MAX_TERMS);
+    clearFieldError("terms");
+    fillTermRows(terms);
+    if (truncated) {
+      setFieldError(
+        "terms",
+        `Loaded the first ${MAX_TERMS} terms. A set can have at most ${MAX_TERMS}.`,
+      );
+    }
+  } catch {
+    setFieldError("terms", "Could not read that file. Try a CSV or text file.");
+  }
 });
 
 form.addEventListener("submit", async (event) => {
