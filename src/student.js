@@ -42,6 +42,7 @@ const state = {
   running: false,
   ended: false,
   endsAt: 0,
+  answerEndsAt: 0,
   timers: [],
   tickId: null,
 };
@@ -105,9 +106,19 @@ function updateHud() {
   accuracyEl.textContent = percent === null ? "—" : `${percent}%`;
 }
 
+function updateAnswerCountdown() {
+  if (!state.answerEndsAt || !state.running || state.ended) return;
+  const seconds = Math.max(0, Math.ceil((state.answerEndsAt - Date.now()) / 1000));
+  stageLabel.textContent =
+    seconds > 0
+      ? `Choose the matching term · ${seconds}s`
+      : "Choose the matching term";
+}
+
 function updateTimerDisplay() {
   const remaining = state.endsAt - Date.now();
   timerEl.textContent = formatTime(remaining);
+  updateAnswerCountdown();
   if (remaining <= 0 && state.running) {
     endPractice();
   }
@@ -149,6 +160,7 @@ function startRound() {
 
   clearTimers();
   clearFeedback();
+  state.answerEndsAt = 0;
   optionsEl.hidden = true;
   optionsEl.innerHTML = "";
   stageLabel.textContent = "Read the definition";
@@ -163,8 +175,12 @@ function startRound() {
   later(() => {
     if (!state.running || state.ended) return;
     definitionBox.classList.remove("is-revealing");
-    stageLabel.textContent = "Choose the matching term";
     renderOptions(question);
+    state.answerEndsAt = Date.now() + config.answerMs;
+    updateAnswerCountdown();
+    later(() => {
+      handleAnswer(null);
+    }, config.answerMs);
   }, config.definitionMs);
 }
 
@@ -172,8 +188,12 @@ function handleAnswer(selectedTerm) {
   if (!state.running || state.ended || !state.current) return;
   if (!optionsEl || optionsEl.hidden) return;
 
+  clearTimers();
+  state.answerEndsAt = 0;
+
   const { correctTerm } = state.current;
-  const isCorrect = selectedTerm === correctTerm;
+  const timedOut = selectedTerm == null;
+  const isCorrect = !timedOut && selectedTerm === correctTerm;
 
   state.attempted += 1;
   if (isCorrect) state.correct += 1;
@@ -183,7 +203,7 @@ function handleAnswer(selectedTerm) {
   optionsEl.querySelectorAll("button").forEach((button) => {
     if (button.dataset.term === correctTerm) {
       button.classList.add("is-correct");
-    } else if (button.dataset.term === selectedTerm && !isCorrect) {
+    } else if (!timedOut && button.dataset.term === selectedTerm && !isCorrect) {
       button.classList.add("is-wrong");
     }
   });
@@ -193,6 +213,9 @@ function handleAnswer(selectedTerm) {
   if (isCorrect) {
     stageLabel.textContent = "Correct!";
     showFeedback("Correct!", "correct");
+  } else if (timedOut) {
+    stageLabel.textContent = "Time’s up";
+    showFeedback(`Time’s up. The correct term was “${correctTerm}”.`, "wrong");
   } else {
     stageLabel.textContent = "Not quite";
     showFeedback(`The correct term was “${correctTerm}”.`, "wrong");
@@ -286,6 +309,7 @@ function startPractice(studentName) {
   state.running = true;
   state.ended = false;
   state.endsAt = Date.now() + config.practiceMs;
+  state.answerEndsAt = 0;
 
   showPanel(practicePanel);
   updateHud();
@@ -306,7 +330,7 @@ function setupGate() {
   setLabel.textContent = vocabSet.setName;
   gateTitle.textContent = vocabSet.setName;
   gateLede.textContent =
-    `Practice is due ${formatDueAt(vocabSet)}. Enter your name to begin. You’ll have ten minutes to match definitions to terms, and you can practice as many times as you want.`;
+    `Practice is due ${formatDueAt(vocabSet)}. Enter your name to begin. You’ll have ten minutes to match definitions to terms. After each definition, you have 15 seconds to choose the matching term. You can practice as many times as you want.`;
   showPanel(gatePanel);
   if (state.studentName) {
     gateForm.studentName.value = state.studentName;

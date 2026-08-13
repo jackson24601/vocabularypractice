@@ -14,6 +14,7 @@ export const MAX_TERMS = 50;
 export const MIN_TERMS = 4;
 export const PRACTICE_DURATION_MS = 10 * 60 * 1000;
 export const DEFINITION_REVEAL_MS = 3000;
+export const ANSWER_TIMEOUT_MS = 15_000;
 export const FEEDBACK_MS = 1800;
 
 export {
@@ -319,6 +320,7 @@ export function getPracticeConfig() {
   return {
     practiceMs: fast ? 20_000 : PRACTICE_DURATION_MS,
     definitionMs: fast ? 800 : DEFINITION_REVEAL_MS,
+    answerMs: fast ? 4_000 : ANSWER_TIMEOUT_MS,
     feedbackMs: fast ? 1200 : FEEDBACK_MS,
     fast,
   };
