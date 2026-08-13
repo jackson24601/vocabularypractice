@@ -19,7 +19,7 @@ Students open the shared link, enter their name, and begin a timed matching prac
 
 1. A definition appears for 3 seconds
 2. Four term choices appear
-3. Students select the matching term
+3. Students have 15 seconds to select the matching term. No answer in that window counts as incorrect.
 4. Score and correct-count stay visible throughout
 
 Practice ends after ten minutes. There is no passing score. Students can take the practice as many times as they want before the due time; every attempt is saved.
@@ -49,7 +49,7 @@ npm run dev
 - Student page needs a generated link from the teacher success screen
 - Class report page is the second link on the success screen
 
-For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session). To test the class report email, set the due time a minute or two ahead and leave the class report page open.
+For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session, 4s answer window). To test the class report email, set the due time a minute or two ahead and leave the class report page open.
 
 ```bash
 npm test
