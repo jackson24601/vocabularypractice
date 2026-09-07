@@ -176,22 +176,30 @@ async function postFormSubmit(teacherEmail, fields) {
     throw new Error("Missing teacher email address.");
   }
 
-  const response = await fetch(
-    `https://formsubmit.co/ajax/${encodeURIComponent(email)}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
+  let response;
+  try {
+    response = await fetch(
+      `https://formsubmit.co/ajax/${encodeURIComponent(email)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          _template: "box",
+          _captcha: "false",
+          email,
+          ...fields,
+        }),
       },
-      body: JSON.stringify({
-        _template: "box",
-        _captcha: "false",
-        email,
-        ...fields,
-      }),
-    },
-  );
+    );
+  } catch (error) {
+    if (error instanceof TypeError && /fetch/i.test(error.message)) {
+      throw new Error("The email service could not be reached from this browser.");
+    }
+    throw error;
+  }
 
   let data = null;
   try {
