@@ -10,6 +10,7 @@ import {
   readReportStore,
   updateStoreFlags,
 } from "./store.js";
+import { encodeSetPayload } from "./setPayload.js";
 
 export const STORAGE_KEY = "wordnest.vocabularySets";
 export const REPORTS_KEY = "wordnest.practiceReports";
@@ -29,6 +30,7 @@ export {
   summarizeReports,
 } from "./reportUtils.js";
 export { createReportStore, readReportStore, saveStudentReport } from "./store.js";
+export { decodeSetPayload, encodeSetPayload, getEncodedSetParam } from "./setPayload.js";
 
 export function todayIsoDate() {
   const now = new Date();
@@ -63,64 +65,19 @@ export function saveSet(set) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sets));
 }
 
-export function encodeSetPayload(set) {
-  const payload = {
-    id: set.id,
-    setName: set.setName,
-    dueDate: set.dueDate,
-    dueTime: set.dueTime,
-    dueAt: set.dueAt,
-    teacherEmail: set.teacherEmail,
-    storeId: set.storeId,
-    storeEditKey: set.storeEditKey,
-  };
-  if (Array.isArray(set.terms) && set.terms.length && !set.storeId) {
-    payload.terms = set.terms;
-  }
-  const json = JSON.stringify(payload);
-  const base64 = btoa(unescape(encodeURIComponent(json)));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-export function decodeSetPayload(encoded) {
-  if (!encoded) return null;
-  try {
-    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
-    const padLength = (4 - (padded.length % 4)) % 4;
-    const base64 = padded + "=".repeat(padLength);
-    const json = decodeURIComponent(escape(atob(base64)));
-    const payload = JSON.parse(json);
-    if (
-      !payload ||
-      typeof payload.setName !== "string"
-    ) {
-      return null;
-    }
-    const hasTerms =
-      Array.isArray(payload.terms) && payload.terms.length >= MIN_TERMS;
-    const hasStore = typeof payload.storeId === "string" && payload.storeId;
-    if (!hasTerms && !hasStore) {
-      return null;
-    }
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-function buildAppLink(page, set) {
+async function buildAppLink(page, set) {
   // Resolve relative to the current page so GitHub Pages project URLs work
   // (e.g. https://user.github.io/vocabularypractice/).
   const url = new URL(page, window.location.href);
-  url.searchParams.set("set", encodeSetPayload(set));
+  url.searchParams.set("s", await encodeSetPayload(set));
   return url.toString();
 }
 
-export function buildStudentLink(set) {
+export async function buildStudentLink(set) {
   return buildAppLink("student.html", set);
 }
 
-export function buildReportLink(set) {
+export async function buildReportLink(set) {
   return buildAppLink("report.html", set);
 }
 
