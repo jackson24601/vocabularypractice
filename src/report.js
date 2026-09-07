@@ -2,6 +2,7 @@ import {
   decodeSetPayload,
   formatDueAt,
   getDueAt,
+  getEncodedSetParam,
   hasReportStore,
   isDueExpired,
   readReportStore,
@@ -18,8 +19,7 @@ const rowsEl = document.querySelector("#report-rows");
 const sendButton = document.querySelector("#send-report");
 const refreshButton = document.querySelector("#refresh-report");
 
-const params = new URLSearchParams(window.location.search);
-const vocabSet = decodeSetPayload(params.get("set"));
+let vocabSet = null;
 
 let sending = false;
 let tickId = null;
@@ -181,9 +181,7 @@ window.addEventListener("beforeunload", () => {
   if (pollId) window.clearInterval(pollId);
 });
 
-if (!vocabSet) {
-  showPanel(missingPanel);
-} else if (!hasReportStore(vocabSet)) {
+function showEmailFallback() {
   showPanel(reportPanel);
   document.querySelector("#report-title").textContent =
     vocabSet.setName || "Class report";
@@ -200,6 +198,22 @@ if (!vocabSet) {
   }
   sendButton.disabled = true;
   refreshButton.disabled = true;
+}
+
+const encodedSet = getEncodedSetParam(window.location.search, window.location.hash);
+if (!encodedSet) {
+  showPanel(missingPanel);
 } else {
-  setup();
+  decodeSetPayload(encodedSet).then((decoded) => {
+    vocabSet = decoded;
+    if (!vocabSet) {
+      showPanel(missingPanel);
+    } else if (!hasReportStore(vocabSet)) {
+      showEmailFallback();
+    } else {
+      setup();
+    }
+  }).catch(() => {
+    showPanel(missingPanel);
+  });
 }

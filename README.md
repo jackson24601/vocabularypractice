@@ -32,7 +32,7 @@ When live storage is available, leave the class report page open until the due t
 
 New practice sessions cannot start after the due time.
 
-Sets travel in the student and class-report links themselves, so teachers can share those URLs directly.
+Sets travel in the student and class-report links themselves, so teachers can share those URLs directly. The set is packed into a short compressed code in the link (`?s=`). Older `?set=` links still open.
 
 ## Live site
 

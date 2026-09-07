@@ -227,9 +227,11 @@ function validateForm() {
   };
 }
 
-function showSuccess(set) {
-  const studentLink = buildStudentLink(set);
-  const reportLink = buildReportLink(set);
+async function showSuccess(set) {
+  const [studentLink, reportLink] = await Promise.all([
+    buildStudentLink(set),
+    buildReportLink(set),
+  ]);
   form.hidden = true;
   successPanel.hidden = false;
   document.querySelector("#success-message").textContent = hasReportStore(set)
@@ -245,7 +247,7 @@ function showSuccess(set) {
   copyReportLinkButton.textContent = "Copy link";
   studentLinkInput.focus();
   studentLinkInput.select();
-  renderSavedSets();
+  await renderSavedSets();
 }
 
 async function copyText(input, button) {
@@ -262,7 +264,7 @@ async function copyText(input, button) {
   }
 }
 
-function renderSavedSets() {
+async function renderSavedSets() {
   const sets = loadSets();
   if (!savedSetsSection || !savedSetsList) return;
   savedSetsList.innerHTML = "";
@@ -272,7 +274,8 @@ function renderSavedSets() {
   }
 
   savedSetsSection.hidden = false;
-  sets.slice(0, 8).forEach((set) => {
+  const items = sets.slice(0, 8);
+  for (const set of items) {
     const item = document.createElement("li");
     item.className = "saved-set";
     const title = document.createElement("p");
@@ -285,16 +288,16 @@ function renderSavedSets() {
     actions.className = "saved-set-actions";
     const student = document.createElement("a");
     student.className = "btn btn-secondary";
-    student.href = buildStudentLink(set);
+    student.href = await buildStudentLink(set);
     student.textContent = "Student link";
     const report = document.createElement("a");
     report.className = "btn btn-primary";
-    report.href = buildReportLink(set);
+    report.href = await buildReportLink(set);
     report.textContent = "Class report";
     actions.append(student, report);
     item.append(title, meta, actions);
     savedSetsList.appendChild(item);
-  });
+  }
 }
 
 function resetForm() {
@@ -389,7 +392,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   saveSet(completeSet);
-  showSuccess(completeSet);
+  await showSuccess(completeSet);
 });
 
 createAnotherButton.addEventListener("click", () => {
@@ -409,5 +412,5 @@ dueTimeInput.value = dueTimeInput.value || "23:59";
 for (let i = 0; i < MIN_TERMS; i += 1) {
   addTermRow();
 }
-renderSavedSets();
+void renderSavedSets();
 form.setName.focus();

@@ -2,6 +2,7 @@ import {
   decodeSetPayload,
   formatDueAt,
   getPracticeConfig,
+  getEncodedSetParam,
   hasReportStore,
   isDueExpired,
   pickQuestion,
@@ -31,7 +32,6 @@ const feedbackEl = document.querySelector("#feedback");
 const optionsEl = document.querySelector("#options");
 const tryAgainButton = document.querySelector("#try-again");
 
-const params = new URLSearchParams(window.location.search);
 const config = getPracticeConfig();
 let vocabSet = null;
 
@@ -358,11 +358,13 @@ function setupClosed() {
   });
 }
 
-if (!params.get("set")) {
+const encodedSet = getEncodedSetParam(window.location.search, window.location.hash);
+if (!encodedSet) {
   showPanel(missingPanel);
 } else {
   showPanel(loadingPanel);
-  resolveVocabSet(decodeSetPayload(params.get("set")))
+  decodeSetPayload(encodedSet)
+    .then((payload) => resolveVocabSet(payload))
     .then((set) => {
       vocabSet = set;
       if (!vocabSet) {
