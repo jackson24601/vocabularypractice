@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   appendReport,
+  buildAttemptEmail,
   buildClassReportEmail,
+  buildTeacherSetupEmail,
   dueAtFromInputs,
   getDueAt,
+  hasReportStore,
   isDueExpired,
   summarizeReports,
 } from "./reportUtils.js";
@@ -137,5 +140,44 @@ describe("buildClassReportEmail", () => {
     const email = buildClassReportEmail({ setName: "Empty set" }, []);
     assert.equal(email.studentCount, 0);
     assert.match(email.message, /No students completed practice/);
+  });
+});
+
+describe("hasReportStore", () => {
+  it("requires both a store id and edit key", () => {
+    assert.equal(hasReportStore({ storeId: "abc", storeEditKey: "key" }), true);
+    assert.equal(hasReportStore({ storeId: "abc" }), false);
+    assert.equal(hasReportStore({}), false);
+  });
+});
+
+describe("buildAttemptEmail", () => {
+  it("includes the student name and score", () => {
+    const email = buildAttemptEmail({
+      setName: "Ecosystems",
+      studentName: "Ada",
+      correct: 8,
+      attempted: 10,
+      accuracy: 80,
+      completedAt: "2026-09-07T12:00:00.000Z",
+    });
+    assert.match(email.subject, /Ada/);
+    assert.match(email.subject, /Ecosystems/);
+    assert.match(email.message, /Ada/);
+    assert.match(email.message, /80%/);
+    assert.match(email.message, /Correct matches: 8/);
+    assert.equal(email.studentName, "Ada");
+  });
+});
+
+describe("buildTeacherSetupEmail", () => {
+  it("asks the teacher to activate FormSubmit", () => {
+    const email = buildTeacherSetupEmail({
+      setName: "Ecosystems",
+      teacherEmail: "teacher@school.edu",
+    });
+    assert.match(email.subject, /Ecosystems/);
+    assert.match(email.message, /Activate Form/);
+    assert.equal(email.teacherEmail, "teacher@school.edu");
   });
 });

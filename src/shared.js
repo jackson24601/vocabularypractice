@@ -1,6 +1,9 @@
 import {
+  buildAttemptEmail,
   buildClassReportEmail,
+  buildTeacherSetupEmail,
   formatDueAt,
+  hasReportStore,
   isDueExpired,
 } from "./reportUtils.js";
 import {
@@ -21,6 +24,7 @@ export {
   dueAtFromInputs,
   formatDueAt,
   getDueAt,
+  hasReportStore,
   isDueExpired,
   summarizeReports,
 } from "./reportUtils.js";
@@ -166,40 +170,36 @@ export function saveReport(report) {
   }
 }
 
-/**
- * Email one class report to the teacher via FormSubmit after the due time.
- * The first report to a new address may require the teacher to click an
- * activation link FormSubmit sends them.
- */
-export async function sendClassReportEmail(set, reports) {
-  const teacherEmail = set.teacherEmail?.trim();
-  if (!teacherEmail) {
+async function postFormSubmit(teacherEmail, fields) {
+  const email = teacherEmail?.trim();
+  if (!email) {
     throw new Error("Missing teacher email address.");
   }
 
-  const email = buildClassReportEmail(set, reports);
-  const response = await fetch(
-    `https://formsubmit.co/ajax/${encodeURIComponent(teacherEmail)}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
+  let response;
+  try {
+    response = await fetch(
+      `https://formsubmit.co/ajax/${encodeURIComponent(email)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          _template: "box",
+          _captcha: "false",
+          email,
+          ...fields,
+        }),
       },
-      body: JSON.stringify({
-        _subject: email.subject,
-        _template: "box",
-        _captcha: "false",
-        name: "WordNest class report",
-        email: teacherEmail,
-        setName: set.setName,
-        dueAt: formatDueAt(set),
-        studentsPracticed: email.studentCount,
-        attempts: email.attemptCount,
-        message: email.message,
-      }),
-    },
-  );
+    );
+  } catch (error) {
+    if (error instanceof TypeError && /fetch/i.test(error.message)) {
+      throw new Error("The email service could not be reached from this browser.");
+    }
+    throw error;
+  }
 
   let data = null;
   try {
@@ -220,8 +220,7 @@ export async function sendClassReportEmail(set, reports) {
   if (needsActivation) {
     return {
       status: "activation_required",
-      message:
-        `Almost there: check ${teacherEmail} for a FormSubmit “Activate Form” email, click the link, then open the class report page again so the report can send.`,
+      payloadMessage,
     };
   }
 
@@ -231,13 +230,98 @@ export async function sendClassReportEmail(set, reports) {
 
   return {
     status: "sent",
+    payloadMessage,
+  };
+}
+
+/**
+ * Email one class report to the teacher via FormSubmit after the due time.
+ * The first report to a new address may require the teacher to click an
+ * activation link FormSubmit sends them.
+ */
+export async function sendClassReportEmail(set, reports) {
+  const teacherEmail = set.teacherEmail?.trim();
+  const email = buildClassReportEmail(set, reports);
+  const result = await postFormSubmit(teacherEmail, {
+    _subject: email.subject,
+    name: "WordNest class report",
+    setName: set.setName,
+    dueAt: formatDueAt(set),
+    studentsPracticed: email.studentCount,
+    attempts: email.attemptCount,
+    message: email.message,
+  });
+
+  if (result.status === "activation_required") {
+    return {
+      status: "activation_required",
+      message:
+        `Almost there: check ${teacherEmail} for a FormSubmit “Activate Form” email, click the link, then open the class report page again so the report can send.`,
+    };
+  }
+
+  return {
+    status: "sent",
     message: `Class report emailed to ${teacherEmail}`,
     studentCount: email.studentCount,
   };
 }
 
+export async function sendAttemptEmail(report) {
+  const teacherEmail = report.teacherEmail?.trim();
+  const email = buildAttemptEmail(report);
+  const result = await postFormSubmit(teacherEmail, {
+    _subject: email.subject,
+    name: email.studentName,
+    setName: report.setName,
+    studentName: email.studentName,
+    correctMatches: report.correct,
+    attempts: report.attempted,
+    accuracy: `${report.accuracy ?? 0}%`,
+    completedAt: formatDueAt(report.completedAt),
+    message: email.message,
+  });
+
+  if (result.status === "activation_required") {
+    return {
+      status: "activation_required",
+      message:
+        `Almost there: your teacher needs to click a FormSubmit “Activate Form” email sent to ${teacherEmail}, then you can practice once more so this score can send.`,
+    };
+  }
+
+  return {
+    status: "sent",
+    message: `Score emailed to ${teacherEmail}`,
+  };
+}
+
+export async function sendTeacherSetupEmail(set) {
+  const teacherEmail = set.teacherEmail?.trim();
+  const email = buildTeacherSetupEmail(set);
+  const result = await postFormSubmit(teacherEmail, {
+    _subject: email.subject,
+    name: "WordNest class reports",
+    setName: set.setName,
+    message: email.message,
+  });
+
+  if (result.status === "activation_required") {
+    return {
+      status: "activation_required",
+      message:
+        `Check ${teacherEmail} for a FormSubmit “Activate Form” email and click the link so student scores can arrive.`,
+    };
+  }
+
+  return {
+    status: "sent",
+    message: `Class report email is ready for ${teacherEmail}`,
+  };
+}
+
 export async function sendClassReportIfDue(set, { force = false } = {}) {
-  if (!set?.storeId || !set?.storeEditKey) {
+  if (!hasReportStore(set)) {
     throw new Error("This practice set is missing class report storage.");
   }
   if (!force && !isDueExpired(set)) {
