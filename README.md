@@ -24,9 +24,11 @@ Students open the shared link, enter their name, and begin a timed matching prac
 
 Practice ends after ten minutes. There is no passing score. Students can take the practice as many times as they want before the due time; every attempt is saved.
 
-Student results are saved as they finish. WordNest does **not** email the teacher after each student. When the due date and time have passed, WordNest emails **one class report** listing each student’s name and every score (via [FormSubmit](https://formsubmit.co/)). The first report to a new teacher email may require clicking an activation link FormSubmit sends to that inbox.
+Student results are saved as they finish. When live class-report storage is available, WordNest emails **one class report** after the due date and time, listing each student’s name and every score (via [FormSubmit](https://formsubmit.co/)). If that storage cannot be reached from the browser (GitHub Pages cannot call jsonhosting.com directly because of CORS), WordNest still creates the practice set and emails **each student’s score** as they finish.
 
-Leave the class report page open until the due time, or reopen it after the deadline. If a student opens the practice link after the window closes, that also tries to send the class report.
+The first email to a new teacher address may require clicking an activation link FormSubmit sends to that inbox.
+
+When live storage is available, leave the class report page open until the due time, or reopen it after the deadline. If a student opens the practice link after the window closes, that also tries to send the class report.
 
 New practice sessions cannot start after the due time.
 
@@ -49,7 +51,7 @@ npm run dev
 - Student page needs a generated link from the teacher success screen
 - Class report page is the second link on the success screen
 
-For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session, 4s answer window). To test the class report email, set the due time a minute or two ahead and leave the class report page open.
+For quicker local testing of the practice timer, append `&fast=1` to a student link (20s session, 4s answer window). `npm run dev` proxies class-report storage so the live class report page works locally. On the GitHub Pages site, scores are emailed as students finish if that storage is blocked. To test the class report email, set the due time a minute or two ahead and leave the class report page open.
 
 ```bash
 npm test

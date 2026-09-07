@@ -10,6 +10,14 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    proxy: {
+      // jsonhosting.com does not send CORS headers; proxy it in local dev.
+      "/json-store": {
+        target: "https://jsonhosting.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/json-store/, "/api/json"),
+      },
+    },
   },
   build: {
     rollupOptions: {

@@ -2,11 +2,13 @@ import {
   decodeSetPayload,
   formatDueAt,
   getPracticeConfig,
+  hasReportStore,
   isDueExpired,
   pickQuestion,
   resolveVocabSet,
   saveReport,
   saveStudentReport,
+  sendAttemptEmail,
   sendClassReportIfDue,
 } from "./shared.js";
 
@@ -229,7 +231,7 @@ function handleAnswer(selectedTerm) {
 }
 
 async function maybeSendClassReport() {
-  if (!vocabSet?.storeId) return null;
+  if (!hasReportStore(vocabSet)) return null;
   try {
     return await sendClassReportIfDue(vocabSet);
   } catch {
@@ -273,9 +275,15 @@ async function endPractice() {
   );
 
   resultReport.textContent = "Saving your results…";
-  if (!vocabSet.storeId || !vocabSet.storeEditKey) {
-    resultReport.textContent =
-      "Results saved on this device. This practice link cannot send a class report. Ask your teacher for a new link.";
+  if (!hasReportStore(vocabSet)) {
+    try {
+      const emailResult = await sendAttemptEmail(report);
+      resultReport.textContent = emailResult.message;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown error";
+      resultReport.textContent =
+        `Could not email your score to the teacher. ${detail}`;
+    }
     return;
   }
   try {

@@ -2,6 +2,7 @@ import {
   decodeSetPayload,
   formatDueAt,
   getDueAt,
+  hasReportStore,
   isDueExpired,
   readReportStore,
   sendClassReportIfDue,
@@ -182,12 +183,21 @@ window.addEventListener("beforeunload", () => {
 
 if (!vocabSet) {
   showPanel(missingPanel);
-} else if (!vocabSet.storeId || !vocabSet.storeEditKey) {
+} else if (!hasReportStore(vocabSet)) {
   showPanel(reportPanel);
   document.querySelector("#report-title").textContent =
     vocabSet.setName || "Class report";
   document.querySelector("#report-lede").textContent =
-    "This practice link was created before class reports were available. Create a new set to collect student results and email one report after the due time.";
+    `Live class results aren’t available for this set. Student scores are emailed to ${vocabSet.teacherEmail || "the teacher"} as they finish practice.`;
+  document.querySelector("#report-due").textContent = formatDueAt(vocabSet);
+  document.querySelector("#report-email").textContent =
+    vocabSet.teacherEmail || "—";
+  statusEl.textContent = "Scores are emailed as students finish";
+  const hint = document.querySelector("#report-hint");
+  if (hint) {
+    hint.textContent =
+      "This page cannot collect a live class list from this browser. Check the report inbox for each student’s score.";
+  }
   sendButton.disabled = true;
   refreshButton.disabled = true;
 } else {

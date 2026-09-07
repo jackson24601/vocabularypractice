@@ -1,16 +1,31 @@
-import { appendReport, emptyStorePayload } from "./reportUtils.js";
+import {
+  appendReport,
+  emptyStorePayload,
+  hasReportStore,
+} from "./reportUtils.js";
 
-const JSON_API = "https://jsonhosting.com/api/json";
-const CORS_PROXY = "https://proxy.cors.sh/";
+const JSONHOSTING_API = "https://jsonhosting.com/api/json";
 
-function proxyUrl(url) {
-  return `${CORS_PROXY}${url}`;
+function jsonApiBase() {
+  // Vite can proxy this host in `npm run dev`. GitHub Pages cannot, and
+  // jsonhosting.com does not send CORS headers, so production falls back.
+  if (import.meta.env?.DEV) return "/json-store";
+  return JSONHOSTING_API;
 }
 
 function delay(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
+}
+
+function asError(error) {
+  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+    return new Error(
+      "The class report service could not be reached from this browser.",
+    );
+  }
+  return error instanceof Error ? error : new Error("Unknown error");
 }
 
 async function parseBody(response) {
@@ -43,12 +58,9 @@ async function fetchJson(url, options = {}) {
 
 async function requestJson(url, options = {}) {
   try {
-    return await fetchJson(proxyUrl(url), options);
+    return await fetchJson(url, options);
   } catch (error) {
-    if (!url.startsWith(CORS_PROXY)) {
-      return await fetchJson(url, options);
-    }
-    throw error;
+    throw asError(error);
   }
 }
 
@@ -59,8 +71,10 @@ function unwrapStore(data) {
   return data;
 }
 
+export { hasReportStore };
+
 export async function createReportStore(set) {
-  const created = await requestJson(`${JSON_API}/save`, {
+  const created = await requestJson(`${jsonApiBase()}/save`, {
     method: "POST",
     body: JSON.stringify(emptyStorePayload(set)),
   });
@@ -77,7 +91,9 @@ export async function readReportStore(storeId) {
   if (!storeId) {
     throw new Error("Missing class report storage.");
   }
-  const data = await requestJson(`${JSON_API}/${encodeURIComponent(storeId)}`);
+  const data = await requestJson(
+    `${jsonApiBase()}/${encodeURIComponent(storeId)}`,
+  );
   return unwrapStore(data) || emptyStorePayload({});
 }
 
@@ -85,7 +101,7 @@ export async function writeReportStore(storeId, storeEditKey, payload) {
   if (!storeId || !storeEditKey) {
     throw new Error("Missing class report storage.");
   }
-  await requestJson(`${JSON_API}/${encodeURIComponent(storeId)}`, {
+  await requestJson(`${jsonApiBase()}/${encodeURIComponent(storeId)}`, {
     method: "PUT",
     body: JSON.stringify({
       editKey: storeEditKey,
@@ -96,7 +112,7 @@ export async function writeReportStore(storeId, storeEditKey, payload) {
 }
 
 export async function saveStudentReport(set, report) {
-  if (!set?.storeId || !set?.storeEditKey) {
+  if (!hasReportStore(set)) {
     throw new Error("This practice set is missing class report storage.");
   }
 

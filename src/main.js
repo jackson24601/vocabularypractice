@@ -6,8 +6,10 @@ import {
   createReportStore,
   dueAtFromInputs,
   formatDueAt,
+  hasReportStore,
   loadSets,
   saveSet,
+  sendTeacherSetupEmail,
   todayIsoDate,
 } from "./shared.js";
 import { parseTermList } from "./termImport.js";
@@ -230,8 +232,9 @@ function showSuccess(set) {
   const reportLink = buildReportLink(set);
   form.hidden = true;
   successPanel.hidden = false;
-  document.querySelector("#success-message").textContent =
-    `“${set.setName}” is ready. Share the student link below. One class report will go to ${set.teacherEmail} after ${formatDueAt(set)}.`;
+  document.querySelector("#success-message").textContent = hasReportStore(set)
+    ? `“${set.setName}” is ready. Share the student link below. One class report will go to ${set.teacherEmail} after ${formatDueAt(set)}.`
+    : `“${set.setName}” is ready. Share the student link below. Each time a student finishes, their score will be emailed to ${set.teacherEmail}.`;
   document.querySelector("#success-name").textContent = set.setName;
   document.querySelector("#success-due").textContent = formatDueAt(set);
   document.querySelector("#success-email").textContent = set.teacherEmail;
@@ -364,7 +367,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   submitButton.disabled = true;
-  submitButton.textContent = "Setting up class reports…";
+  submitButton.textContent = "Creating practice set…";
 
   const set = {
     id: crypto.randomUUID(),
@@ -372,20 +375,21 @@ form.addEventListener("submit", async (event) => {
     createdAt: new Date().toISOString(),
   };
 
+  let completeSet = { ...set };
   try {
-    const store = await createReportStore(set);
-    const completeSet = { ...set, ...store };
-    saveSet(completeSet);
-    showSuccess(completeSet);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "Unknown error";
-    setFieldError(
-      "teacherEmail",
-      `Could not set up class reports. ${detail}`,
-    );
-    submitButton.disabled = false;
-    submitButton.textContent = "Create practice set";
+    completeSet = { ...set, ...(await createReportStore(set)) };
+  } catch {
+    // jsonhosting.com blocks browser CORS on GitHub Pages. Practice still
+    // works from the shareable link; student scores are emailed instead.
+    try {
+      await sendTeacherSetupEmail(completeSet);
+    } catch {
+      // Activation email is helpful but should not block creating the set.
+    }
   }
+
+  saveSet(completeSet);
+  showSuccess(completeSet);
 });
 
 createAnotherButton.addEventListener("click", () => {

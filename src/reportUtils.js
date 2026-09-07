@@ -75,10 +75,51 @@ export function appendReport(store, report) {
   return { ...store, reports };
 }
 
+export function hasReportStore(set) {
+  return Boolean(set?.storeId && set?.storeEditKey);
+}
+
 export function studentLabel(report) {
   const name = String(report?.studentName || "").trim();
   if (name) return name;
   return String(report?.studentEmail || "").trim();
+}
+
+export function buildAttemptEmail(report) {
+  const name = studentLabel(report) || "A student";
+  const setName = report?.setName || "Vocabulary practice";
+  const accuracy =
+    report?.accuracy == null ? "—" : `${report.accuracy}%`;
+  const lines = [
+    `${name} finished vocabulary practice on WordNest.`,
+    "",
+    `Vocabulary set: ${setName}`,
+    `Student: ${name}`,
+    `Correct matches: ${report?.correct ?? 0}`,
+    `Total attempts: ${report?.attempted ?? 0}`,
+    `Accuracy: ${accuracy}`,
+    `Completed: ${formatCompletedAt(report?.completedAt)}`,
+  ];
+  return {
+    subject: `WordNest: ${name} practiced ${setName}`,
+    message: lines.join("\n"),
+    studentName: name,
+  };
+}
+
+export function buildTeacherSetupEmail(set) {
+  const setName = set?.setName || "Vocabulary practice";
+  const teacherEmail = String(set?.teacherEmail || "").trim();
+  const lines = [
+    `WordNest will email student practice scores for “${setName}” to this address.`,
+    "",
+    "If FormSubmit sent an “Activate Form” email, click that link so student scores can arrive.",
+  ];
+  return {
+    subject: `WordNest: confirm class reports for ${setName}`,
+    message: lines.join("\n"),
+    teacherEmail,
+  };
 }
 
 export function summarizeReports(reports) {
