@@ -8,6 +8,7 @@ import {
 } from "./reportUtils.js";
 import {
   readReportStore,
+  saveStudentReport,
   updateStoreFlags,
 } from "./store.js";
 import { encodeSetPayload } from "./setPayload.js";
@@ -251,6 +252,32 @@ export async function sendAttemptEmail(report) {
     status: "sent",
     message: `Score emailed to ${teacherEmail}`,
   };
+}
+
+/**
+ * Save the attempt when live storage exists, then always email this score
+ * to the teacher address from the create form.
+ */
+export async function submitPracticeResult(set, report) {
+  if (hasReportStore(set)) {
+    try {
+      await saveStudentReport(set, report);
+    } catch {
+      // Storage is optional. The teacher still gets this score by email.
+    }
+  }
+
+  const email = await sendAttemptEmail(report);
+
+  if (hasReportStore(set) && isDueExpired(set)) {
+    try {
+      await sendClassReportIfDue(set);
+    } catch {
+      // Per-attempt email already went out.
+    }
+  }
+
+  return email;
 }
 
 export async function sendTeacherSetupEmail(set) {

@@ -170,7 +170,7 @@ function validateForm() {
     form.teacherEmail.classList.add("invalid");
     setFieldError(
       "teacherEmail",
-      "Enter an email address for the class report.",
+      "Enter an email address for student scores.",
     );
     valid = false;
   } else if (!form.teacherEmail.checkValidity()) {
@@ -235,7 +235,7 @@ async function showSuccess(set) {
   form.hidden = true;
   successPanel.hidden = false;
   document.querySelector("#success-message").textContent = hasReportStore(set)
-    ? `“${set.setName}” is ready. Share the student link below. One class report will go to ${set.teacherEmail} after ${formatDueAt(set)}.`
+    ? `“${set.setName}” is ready. Share the student link below. Each time a student finishes, their score will be emailed to ${set.teacherEmail}. You can also bookmark the class report page to watch scores as they come in.`
     : `“${set.setName}” is ready. Share the student link below. Each time a student finishes, their score will be emailed to ${set.teacherEmail}.`;
   document.querySelector("#success-name").textContent = set.setName;
   document.querySelector("#success-due").textContent = formatDueAt(set);
@@ -383,12 +383,13 @@ form.addEventListener("submit", async (event) => {
     completeSet = { ...set, ...(await createReportStore(set)) };
   } catch {
     // jsonhosting.com blocks browser CORS on GitHub Pages. Practice still
-    // works from the shareable link; student scores are emailed instead.
-    try {
-      await sendTeacherSetupEmail(completeSet);
-    } catch {
-      // Activation email is helpful but should not block creating the set.
-    }
+    // works from the shareable link; student scores are emailed as they finish.
+  }
+
+  try {
+    await sendTeacherSetupEmail(completeSet);
+  } catch {
+    // Activation email is helpful but should not block creating the set.
   }
 
   saveSet(completeSet);

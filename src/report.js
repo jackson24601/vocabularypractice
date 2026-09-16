@@ -130,7 +130,7 @@ async function sendReport({ force = false } = {}) {
 async function setup() {
   document.querySelector("#report-title").textContent = vocabSet.setName;
   document.querySelector("#report-lede").textContent =
-    `Results are collected until ${formatDueAt(vocabSet)}. One class report will be emailed to ${vocabSet.teacherEmail} when that time is reached.`;
+    `Each student score is emailed to ${vocabSet.teacherEmail} as they finish. This page also collects live results until ${formatDueAt(vocabSet)}.`;
   document.querySelector("#report-due").textContent = formatDueAt(vocabSet);
   document.querySelector("#report-email").textContent = vocabSet.teacherEmail;
   showPanel(reportPanel);
