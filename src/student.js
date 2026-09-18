@@ -8,9 +8,8 @@ import {
   pickQuestion,
   resolveVocabSet,
   saveReport,
-  saveStudentReport,
-  sendAttemptEmail,
   sendClassReportIfDue,
+  submitPracticeResult,
 } from "./shared.js";
 
 const missingPanel = document.querySelector("#missing-panel");
@@ -274,32 +273,14 @@ async function endPractice() {
     config.practiceMs,
   );
 
-  resultReport.textContent = "Saving your results…";
-  if (!hasReportStore(vocabSet)) {
-    try {
-      const emailResult = await sendAttemptEmail(report);
-      resultReport.textContent = emailResult.message;
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "Unknown error";
-      resultReport.textContent =
-        `Could not email your score to the teacher. ${detail}`;
-    }
-    return;
-  }
+  resultReport.textContent = "Sending your score…";
   try {
-    await saveStudentReport(vocabSet, report);
-    if (isDueExpired(vocabSet)) {
-      const emailResult = await maybeSendClassReport();
-      resultReport.textContent = emailResult?.message
-        || `Results saved. Practice closed ${formatDueAt(vocabSet)}.`;
-    } else {
-      resultReport.textContent =
-        `Results saved. Your teacher will get a class report after ${formatDueAt(vocabSet)}.`;
-    }
+    const emailResult = await submitPracticeResult(vocabSet, report);
+    resultReport.textContent = emailResult.message;
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown error";
     resultReport.textContent =
-      `Could not save your results for the class report. ${detail}`;
+      `Could not email your score to the teacher. ${detail}`;
   }
 }
 
@@ -349,7 +330,7 @@ function setupGate() {
 function setupClosed() {
   setLabel.textContent = vocabSet.setName;
   document.querySelector("#closed-lede").textContent =
-    `Practice for “${vocabSet.setName}” closed ${formatDueAt(vocabSet)}. Your teacher will receive one class report for everyone who practiced.`;
+    `Practice for “${vocabSet.setName}” closed ${formatDueAt(vocabSet)}. Scores were emailed to ${vocabSet.teacherEmail} as students finished.`;
   showPanel(closedPanel);
   const closedReport = document.querySelector("#closed-report");
   closedReport.textContent = "Checking the class report…";
